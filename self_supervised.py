@@ -2,6 +2,7 @@ import re
 import numpy as np
 
 import tensorflow.compat.v1 as tf
+import functools
 tf.disable_eager_execution()
 import tensorflow_hub as hub
 import tensorflow_datasets as tfds
@@ -9,7 +10,7 @@ import tensorflow_datasets as tfds
 import matplotlib
 import matplotlib.pyplot as plt
 
-FLAG_color_jitter_strength = 0.3
+FLAGS_color_jitter_strength = 0.3
 CROP_PROPORTION = 0.875 # Standard for ImageNet.
 
 def count_params(checkpoint, excluding_vars=[], verbose=True):
@@ -472,3 +473,36 @@ if __name__ == "__main__":
 
     classes = ("plane", "car", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck")
     cifar10_mappings = {i: label for i, label in enumerate(classes)}
+
+    BATCH_SIZE = 4
+    DATASET_NAME = "cifar10"
+    
+    train_set, train_set_info = tfds.load(DATASET_NAME, split="train", with_info=True)
+    test_set, test_set_info = tfds.load(DATASET_NAME, split="test", with_info=True)
+
+    num_train_images = train_set_info.splits["train"].num_examples
+    num_classes = train_set_info.features["label"].num_classes
+    num_test_images = test_set_info.splits["test"].num_examples
+
+    def preprocess_image(image, height, width, is_training):
+        # Resize and normalize the image
+        image = tf.image.resize(image, [height, width])
+        image = tf.cast(image, tf.float32) / 255.0
+        return image
+
+    def _preprocess(x):
+        x["image"] = preprocess_image(
+                                    x["image"], 
+                                    224, 
+                                    224, 
+                                    is_training=False
+                                    )
+        return x
+
+    x = train_set.map(_preprocess).batch(BATCH_SIZE)
+    x = tf.compat.v1.data.make_one_shot_iterator(x).get_next()
+
+    # Print the number of images and classes to verify
+    print(f"Number of train images: {num_train_images}")
+    print(f"Number of test images: {num_test_images}")
+    print(f"Number of classes: {num_classes}")
