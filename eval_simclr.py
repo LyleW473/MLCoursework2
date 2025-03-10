@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import torchvision
 
-
+from PIL import Image
 
 from SCAN.utils.config import create_config
 from SCAN.utils.common_config import get_model, get_val_transformations
@@ -26,14 +26,29 @@ if __name__ == "__main__":
     print(val_transforms)
     print(type(val_transforms))
     
-    val_set = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=val_transforms) # Using the train set for creating the embeddings
+    def standard_transform(image):
+        return np.array(image)
+    
+    val_set = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=standard_transform) # Using the train set for creating the embeddings
     val_dl = torch.utils.data.DataLoader(val_set, batch_size=2, shuffle=True)
     
+    embedding_dict = {}
+
     for i, (images, labels) in enumerate(val_dl):
-        print(images.shape)
-        print(labels)
+        print(images.shape, type(images))
+        print(labels)   
+
+        # Use transformed images for creating the embeddings
+        transformed_images = torch.stack([val_transforms(Image.fromarray(np.array(image))) for image in images])
         
-        embeddings = model(images.cuda()).cpu().detach().numpy()
+        embeddings = model(transformed_images.cuda()).cpu().detach().numpy()
         print(embeddings.shape)
 
-        break
+        for j in range(embeddings.shape[0]):
+            embedding_dict[i * val_dl.batch_size + j] = {
+                                                        "embedding": embeddings[j],
+                                                        "image": images[j], # Store original image
+                                                        "label": labels[j]
+                                                        }
+            
+        print(f"Batch: {i+1}/{len(val_dl)}")
