@@ -1,7 +1,11 @@
 import torch
+import numpy as np
+import torchvision
+
+
 
 from SCAN.utils.config import create_config
-from SCAN.utils.common_config import get_model
+from SCAN.utils.common_config import get_model, get_val_transformations
 
 if __name__ == "__main__":
     print("Hello")
@@ -18,5 +22,18 @@ if __name__ == "__main__":
     print(model)
     model = model.cuda()
 
-    embeddings = model(torch.randn(2, 3, 32, 32).cuda())
-    print(embeddings.shape)
+    val_transforms = get_val_transformations(config)
+    print(val_transforms)
+    print(type(val_transforms))
+    
+    val_set = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=val_transforms) # Using the train set for creating the embeddings
+    val_dl = torch.utils.data.DataLoader(val_set, batch_size=2, shuffle=True)
+    
+    for i, (images, labels) in enumerate(val_dl):
+        print(images.shape)
+        print(labels)
+        
+        embeddings = model(images.cuda()).cpu().detach().numpy()
+        print(embeddings.shape)
+
+        break
