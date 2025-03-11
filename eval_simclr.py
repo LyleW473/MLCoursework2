@@ -68,6 +68,7 @@ if __name__ == "__main__":
         # Perform K-Means Clustering on the embeddings
         K = 20 # From the original paper
         from sklearn.cluster import KMeans
+        from sklearn.neighbors import NearestNeighbors
 
         all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
         print(all_embeddings.shape)
@@ -76,3 +77,29 @@ if __name__ == "__main__":
         cluster_labels = kmeans.fit_predict(all_embeddings)
 
         print(cluster_labels.shape)
+
+        def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbours=20):
+            selected_indices = []
+
+            for cluster_id in range(num_clusters):
+                
+                cluster_indices = [i for i, label in enumerate(cluster_labels) if label == cluster_id]
+                if len(cluster_indices) == 0:
+                    continue
+                
+                cluster_embeddings = np.array([embedding_dict[i]["embedding"] for i in cluster_indices])
+
+                # Compute typicality scores for each image in the cluster
+                nbrs = NearestNeighbors(n_neighbors=min(k_neighbours, len(cluster_embeddings)), algorithm="auto").fit(cluster_embeddings)
+                distances, _ = nbrs.kneighbors(cluster_embeddings)
+                typicality_scores = 1 / np.mean(distances, axis=1)
+
+                # Select the most typical image from each cluster
+                most_typical_idx = cluster_indices[np.argmax(typicality_scores)]
+                selected_indices.append(most_typical_idx)
+        
+            return selected_indices
+        
+        most_typical_indices = select_most_typical(embedding_dict, cluster_labels, K)
+        print(most_typical_indices)
+        print(len(most_typical_indices))
