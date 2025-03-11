@@ -18,7 +18,7 @@ def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbou
     for cluster_id in range(num_clusters):
         
         cluster_indices = [i for i, label in enumerate(cluster_labels) if label == cluster_id]
-        if len(cluster_indices) == 0:
+        if len(cluster_indices) < 5: # In paper, was stated to drop clusters with less than 5 images
             continue
         
         cluster_embeddings = np.array([embedding_dict[i]["embedding"] for i in cluster_indices])
