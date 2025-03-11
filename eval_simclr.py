@@ -63,3 +63,16 @@ if __name__ == "__main__":
             embedding_dict = pickle.load(f)
 
         print(f"Number of embeddings: {len(embedding_dict)}")
+        print(embedding_dict[0].keys())
+
+        # Perform K-Means Clustering on the embeddings
+        K = 20 # From the original paper
+        from sklearn.cluster import KMeans
+
+        all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
+        print(all_embeddings.shape)
+
+        kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
+        cluster_labels = kmeans.fit_predict(all_embeddings)
+
+        print(cluster_labels.shape)
