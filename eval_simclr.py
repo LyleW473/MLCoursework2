@@ -90,20 +90,22 @@ if __name__ == "__main__":
         print(f"Number of embeddings: {len(embedding_dict)}")
         print(embedding_dict[0].keys())
 
-        # Perform K-Means Clustering on the embeddings
+    # Perform K-Means Clustering on the embeddings
+    if not os.path.exists("embeddings/active_learning_embeddings.pkl"):
+
         B = 50 # Number of new samples to query (active learning batch size)
         K = B
         NUM_ITERATIONS = 100
 
-        labeled_indices = []
-    
+        active_learning_embeddings = {}
+
         for i in range(NUM_ITERATIONS):
             print(f"Iteration: {i+1}/{NUM_ITERATIONS}")
 
             # Concatenate the embeddings
             all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
             print(all_embeddings.shape)
-                  
+                
             kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
             cluster_labels = kmeans.fit_predict(all_embeddings)
 
@@ -114,13 +116,18 @@ if __name__ == "__main__":
             print(len(most_typical_indices))
 
             for idx in most_typical_indices:
-                labeled_indices.append(idx)
+                active_learning_embeddings[idx] = embedding_dict[idx] # Add the most typical image to the active learning set
                 embedding_dict.pop(idx)
 
             # Remap the embeddings:
             new_embedding_dict = {i: embedding_dict[key] for i, key in enumerate(embedding_dict.keys())}
             embedding_dict = new_embedding_dict
 
-        labeled_indices = list(set(labeled_indices)) # Remove duplicates
-        print(labeled_indices)
-        print(f"Number of labeled indices: {len(labeled_indices)}")
+        print(f"Number of embeddings in active learning set: {len(active_learning_embeddings)}")
+        
+        os.makedirs("embeddings", exist_ok=True)
+        with open(f"embeddings/active_learning_embeddings.pkl", "wb") as f:
+            pickle.dump(active_learning_embeddings, f)
+
+    print(f"No. of embeddings/images for new dataset: {len(active_learning_embeddings)}")
+    print("Done!")
