@@ -5,9 +5,34 @@ import pickle
 import os
 
 from PIL import Image
+from sklearn.cluster import KMeans
+from sklearn.neighbors import NearestNeighbors
 
 from SCAN.utils.config import create_config
 from SCAN.utils.common_config import get_model, get_val_transformations
+
+
+def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbours=20):
+    selected_indices = []
+
+    for cluster_id in range(num_clusters):
+        
+        cluster_indices = [i for i, label in enumerate(cluster_labels) if label == cluster_id]
+        if len(cluster_indices) == 0:
+            continue
+        
+        cluster_embeddings = np.array([embedding_dict[i]["embedding"] for i in cluster_indices])
+
+        # Compute typicality scores for each image in the cluster
+        nbrs = NearestNeighbors(n_neighbors=min(k_neighbours, len(cluster_embeddings)), algorithm="auto").fit(cluster_embeddings)
+        distances, _ = nbrs.kneighbors(cluster_embeddings)
+        typicality_scores = 1 / np.mean(distances, axis=1)
+
+        # Select the most typical image from each cluster
+        most_typical_idx = cluster_indices[np.argmax(typicality_scores)]
+        selected_indices.append(most_typical_idx)
+
+    return selected_indices
 
 if __name__ == "__main__":
 
@@ -66,40 +91,36 @@ if __name__ == "__main__":
         print(embedding_dict[0].keys())
 
         # Perform K-Means Clustering on the embeddings
-        K = 20 # From the original paper
-        from sklearn.cluster import KMeans
-        from sklearn.neighbors import NearestNeighbors
+        B = 50 # Number of new samples to query (active learning batch size)
+        K = B
+        NUM_ITERATIONS = 100
 
-        all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
-        print(all_embeddings.shape)
+        labeled_indices = []
+    
+        for i in range(NUM_ITERATIONS):
+            print(f"Iteration: {i+1}/{NUM_ITERATIONS}")
 
-        kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
-        cluster_labels = kmeans.fit_predict(all_embeddings)
+            # Concatenate the embeddings
+            all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
+            print(all_embeddings.shape)
+                  
+            kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
+            cluster_labels = kmeans.fit_predict(all_embeddings)
 
-        print(cluster_labels.shape)
+            print(cluster_labels.shape)
+            
+            most_typical_indices = select_most_typical(embedding_dict, cluster_labels, K)
+            print(most_typical_indices)
+            print(len(most_typical_indices))
 
-        def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbours=20):
-            selected_indices = []
+            for idx in most_typical_indices:
+                labeled_indices.append(idx)
+                embedding_dict.pop(idx)
 
-            for cluster_id in range(num_clusters):
-                
-                cluster_indices = [i for i, label in enumerate(cluster_labels) if label == cluster_id]
-                if len(cluster_indices) == 0:
-                    continue
-                
-                cluster_embeddings = np.array([embedding_dict[i]["embedding"] for i in cluster_indices])
+            # Remap the embeddings:
+            new_embedding_dict = {i: embedding_dict[key] for i, key in enumerate(embedding_dict.keys())}
+            embedding_dict = new_embedding_dict
 
-                # Compute typicality scores for each image in the cluster
-                nbrs = NearestNeighbors(n_neighbors=min(k_neighbours, len(cluster_embeddings)), algorithm="auto").fit(cluster_embeddings)
-                distances, _ = nbrs.kneighbors(cluster_embeddings)
-                typicality_scores = 1 / np.mean(distances, axis=1)
-
-                # Select the most typical image from each cluster
-                most_typical_idx = cluster_indices[np.argmax(typicality_scores)]
-                selected_indices.append(most_typical_idx)
-        
-            return selected_indices
-        
-        most_typical_indices = select_most_typical(embedding_dict, cluster_labels, K)
-        print(most_typical_indices)
-        print(len(most_typical_indices))
+        labeled_indices = list(set(labeled_indices)) # Remove duplicates
+        print(labeled_indices)
+        print(f"Number of labeled indices: {len(labeled_indices)}")
