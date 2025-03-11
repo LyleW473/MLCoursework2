@@ -128,6 +128,10 @@ if __name__ == "__main__":
         os.makedirs("embeddings", exist_ok=True)
         with open(f"embeddings/active_learning_embeddings.pkl", "wb") as f:
             pickle.dump(active_learning_embeddings, f)
+    
+    else:
+        with open("embeddings/active_learning_embeddings.pkl", "rb") as f:
+            active_learning_embeddings = pickle.load(f)
 
     print(f"No. of embeddings/images for new dataset: {len(active_learning_embeddings)}")
     print("Done!")
