@@ -11,6 +11,28 @@ from sklearn.neighbors import NearestNeighbors
 from SCAN.utils.config import create_config
 from SCAN.utils.common_config import get_model, get_val_transformations
 
+"""
+This script performs active learning using the TypiClust algorithm on the CIFAR-10 dataset. 
+
+1. **Representation Learning**:
+    - Embeddings are generated using a SimCLR model pre-trained on CIFAR-10.
+    - The embeddings are extracted from the penultimate layer of the model for each image in the dataset.
+
+2. **Active Learning**:
+    - K-Means clustering is applied to the embeddings (of all images) to create clusters.
+    - The most typical image from the largest cluster is selected based on the computed typicality scores
+      (computed using k-nearest neighbors).
+    - The selected image is added to the labeled dataset.
+
+3. **Iterative Process**:
+    - The process is repeated for `NUM_ITERATIONS` until the active learning budget is exhausted.
+    - The total number of selected samples at the end is `NUM_ITERATIONS`.
+    - The number of clusters is adjusted dynamically using `K = min(L + B, MAX_CLUSTERS)`, 
+      where `L` is the number of already labeled samples and `B` is the batch size.
+
+Output:
+- The selected embeddings are saved to `embeddings/active_learning_embeddings.pkl` for further evaluation.
+"""
 
 def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbours=20):
     """
