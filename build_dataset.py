@@ -3,6 +3,7 @@ import numpy as np
 import torchvision
 import pickle
 import os
+import random
 
 from PIL import Image
 from sklearn.cluster import KMeans
@@ -72,6 +73,10 @@ def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbou
     return most_typical_idx
 
 if __name__ == "__main__":
+
+    np.random.seed(2004)
+    torch.manual_seed(2004)
+    random.seed(2004)
 
     if not os.path.exists("embeddings/simclr_cifar10_embeddings.pkl"):
         print("Hello")
