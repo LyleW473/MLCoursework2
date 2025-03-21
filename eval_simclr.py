@@ -13,6 +13,17 @@ from SCAN.utils.common_config import get_model, get_val_transformations
 
 
 def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbours=20):
+    """
+    Selects the most typical image from each cluster based on the typicality scores
+    computed using the k-nearest neighbours algorithm.
+
+    Args:
+        embedding_dict (Dict[int, Dict[str, Any]]): A dictionary containing the embeddings of the images.
+        cluster_labels (np.ndarray): The cluster labels assigned by the clustering algorithm.
+        num_clusters (int): The number of clusters.
+        k_neighbours (int): The number of neighbours to consider when computing the typicality scores.
+                            Set to 20 by default, same as in the paper.
+    """
     selected_indices = []
 
     for cluster_id in range(num_clusters):
@@ -96,6 +107,7 @@ if __name__ == "__main__":
         B = 50 # Number of new samples to query (active learning batch size)
         K = B
         NUM_ITERATIONS = 100
+        MAX_CLUSTERS = 500
 
         active_learning_embeddings = {}
 
@@ -105,7 +117,10 @@ if __name__ == "__main__":
             # Concatenate the embeddings
             all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
             print(all_embeddings.shape)
-                
+            
+            L_i_1 = len(active_learning_embeddings) # Number of embeddings already labelled
+            K = min(L_i_1 + B, MAX_CLUSTERS) # Update K (same as paper, upper bounded by MAX_CLUSTERS)
+
             kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
             cluster_labels = kmeans.fit_predict(all_embeddings)
 
