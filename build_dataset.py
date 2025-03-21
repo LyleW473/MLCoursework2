@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
         B = 50 # Number of new samples to query (active learning batch size)
         K = B
-        NUM_ITERATIONS = 1000 # Also the number of total samples at the end.
+        NUM_ITERATIONS = 500 # Also the number of total samples at the end.
         MAX_CLUSTERS = 500
 
         active_learning_embeddings = {}
