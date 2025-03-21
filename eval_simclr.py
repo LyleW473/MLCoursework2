@@ -24,26 +24,30 @@ def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbou
         k_neighbours (int): The number of neighbours to consider when computing the typicality scores.
                             Set to 20 by default, same as in the paper.
     """
-    selected_indices = []
+
+    # Find the largest cluster
+    largest_cluster_size = 0
+    largest_cluster_indices = []
 
     for cluster_id in range(num_clusters):
-        
         cluster_indices = [i for i, label in enumerate(cluster_labels) if label == cluster_id]
-        if len(cluster_indices) < 5: # In paper, was stated to drop clusters with less than 5 images
+        if len(cluster_indices) < 5:  # Drop clusters with fewer than 5 images
             continue
-        
-        cluster_embeddings = np.array([embedding_dict[i]["embedding"] for i in cluster_indices])
+        if len(cluster_indices) > largest_cluster_size:
+            largest_cluster_size = len(cluster_indices)
+            largest_cluster_indices = cluster_indices
 
-        # Compute typicality scores for each image in the cluster
-        nbrs = NearestNeighbors(n_neighbors=min(k_neighbours, len(cluster_embeddings)), algorithm="auto").fit(cluster_embeddings)
-        distances, _ = nbrs.kneighbors(cluster_embeddings)
-        typicality_scores = 1 / np.mean(distances, axis=1)
+    # Select the largest cluster out of all clusters with more than 5 images
+    cluster_embeddings = np.array([embedding_dict[i]["embedding"] for i in largest_cluster_indices])
 
-        # Select the most typical image from each cluster
-        most_typical_idx = cluster_indices[np.argmax(typicality_scores)]
-        selected_indices.append(most_typical_idx)
+    # Compute typicality scores for each image in the cluster
+    nbrs = NearestNeighbors(n_neighbors=min(k_neighbours, len(cluster_embeddings)), algorithm="auto").fit(cluster_embeddings)
+    distances, _ = nbrs.kneighbors(cluster_embeddings)
+    typicality_scores = 1 / np.mean(distances, axis=1)
 
-    return selected_indices
+    # Select the most typical image from the cluster
+    most_typical_idx = largest_cluster_indices[np.argmax(typicality_scores)]
+    return most_typical_idx
 
 if __name__ == "__main__":
 
@@ -106,7 +110,7 @@ if __name__ == "__main__":
 
         B = 50 # Number of new samples to query (active learning batch size)
         K = B
-        NUM_ITERATIONS = 100
+        NUM_ITERATIONS = 1000 # Also the number of total samples at the end.
         MAX_CLUSTERS = 500
 
         active_learning_embeddings = {}
@@ -125,14 +129,13 @@ if __name__ == "__main__":
             cluster_labels = kmeans.fit_predict(all_embeddings)
 
             print(cluster_labels.shape)
-            
-            most_typical_indices = select_most_typical(embedding_dict, cluster_labels, K)
-            print(most_typical_indices)
-            print(len(most_typical_indices))
 
-            for idx in most_typical_indices:
-                active_learning_embeddings[idx] = embedding_dict[idx] # Add the most typical image to the active learning set
-                embedding_dict.pop(idx)
+            # Add the most typical image to the active learning set
+            most_typical_idx = select_most_typical(embedding_dict, cluster_labels, K)
+            print(most_typical_idx)
+
+            active_learning_embeddings[most_typical_idx] = embedding_dict[most_typical_idx]
+            embedding_dict.pop(most_typical_idx)
 
             # Remap the embeddings:
             new_embedding_dict = {i: embedding_dict[key] for i, key in enumerate(embedding_dict.keys())}
