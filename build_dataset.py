@@ -6,7 +6,7 @@ import os
 import random
 
 from PIL import Image
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.neighbors import NearestNeighbors
 
 from SCAN.utils.config import create_config
@@ -144,7 +144,7 @@ if __name__ == "__main__":
         num_active_learning_embeddings = 0
 
         for i in range(NUM_ITERATIONS):
-            print(f"Iteration: {i+1}/{NUM_ITERATIONS}")
+            print(f"Iteration: {i+1}/{NUM_ITERATIONS} | K: {K} | Number of embeddings: {num_active_learning_embeddings}")
 
             # Concatenate the embeddings
             all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
@@ -153,7 +153,11 @@ if __name__ == "__main__":
             L_i_1 = num_active_learning_embeddings # Number of embeddings already labelled
             K = min(L_i_1 + B, MAX_CLUSTERS) # Update K (same as paper, upper bounded by MAX_CLUSTERS)
 
-            kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
+            # In paper, states K <= 50, use KMeans, else use MiniBatchKMeans
+            if K <= 50:
+                kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
+            else:
+                kmeans = MiniBatchKMeans(n_clusters=K, batch_size=K * 10, random_state=42).fit(all_embeddings)
             cluster_labels = kmeans.fit_predict(all_embeddings)
 
             # print(cluster_labels.shape)
