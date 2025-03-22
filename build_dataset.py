@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     B = 50 # Number of new samples to query (active learning batch size)
     K = B
-    NUM_ITERATIONS = 100 # Also the number of total samples at the end.
+    NUM_ITERATIONS = 2500 # Also the number of total samples at the end.
     MAX_CLUSTERS = 500
 
     if not os.path.exists("embeddings/simclr_cifar10_embeddings.pkl"):
@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
             # Concatenate the embeddings
             all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
-            print(all_embeddings.shape)
+            # print(all_embeddings.shape)
             
             L_i_1 = num_active_learning_embeddings # Number of embeddings already labelled
             K = min(L_i_1 + B, MAX_CLUSTERS) # Update K (same as paper, upper bounded by MAX_CLUSTERS)
@@ -156,17 +156,18 @@ if __name__ == "__main__":
             kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
             cluster_labels = kmeans.fit_predict(all_embeddings)
 
-            print(cluster_labels.shape)
+            # print(cluster_labels.shape)
+            del all_embeddings
 
             # Add the most typical image to the active learning set
             most_typical_idx = select_most_typical(embedding_dict, cluster_labels, K)
-            print(most_typical_idx)
+            # print(most_typical_idx)
 
             # Select the most typical image and add it to the active learning set
             most_typical_embedding = embedding_dict[most_typical_idx]
             # active_learning_embeddings[most_typical_idx] = embedding_dict[most_typical_idx]
             embedding_dict.pop(most_typical_idx)
-            print(most_typical_embedding.keys())
+            # print(most_typical_embedding.keys())
 
             with open(f"embeddings/{NUM_ITERATIONS}_iterations/embedding_{i}.pkl", "wb") as f: # One embedding per iteration
                 pickle.dump(most_typical_embedding, f)
