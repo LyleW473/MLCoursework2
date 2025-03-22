@@ -78,6 +78,11 @@ if __name__ == "__main__":
     torch.manual_seed(2004)
     random.seed(2004)
 
+    B = 50 # Number of new samples to query (active learning batch size)
+    K = B
+    NUM_ITERATIONS = 100 # Also the number of total samples at the end.
+    MAX_CLUSTERS = 500
+
     if not os.path.exists("embeddings/simclr_cifar10_embeddings.pkl"):
         print("Hello")
 
@@ -133,14 +138,10 @@ if __name__ == "__main__":
         print(embedding_dict[0].keys())
 
     # Perform K-Means Clustering on the embeddings
-    if not os.path.exists("embeddings/active_learning_embeddings.pkl"):
+    if not os.path.exists(f"embeddings/{NUM_ITERATIONS}_iterations"):
+        os.makedirs(f"embeddings/{NUM_ITERATIONS}_iterations", exist_ok=True)
 
-        B = 50 # Number of new samples to query (active learning batch size)
-        K = B
-        NUM_ITERATIONS = 500 # Also the number of total samples at the end.
-        MAX_CLUSTERS = 500
-
-        active_learning_embeddings = {}
+        num_active_learning_embeddings = 0
 
         for i in range(NUM_ITERATIONS):
             print(f"Iteration: {i+1}/{NUM_ITERATIONS}")
@@ -149,7 +150,7 @@ if __name__ == "__main__":
             all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
             print(all_embeddings.shape)
             
-            L_i_1 = len(active_learning_embeddings) # Number of embeddings already labelled
+            L_i_1 = num_active_learning_embeddings # Number of embeddings already labelled
             K = min(L_i_1 + B, MAX_CLUSTERS) # Update K (same as paper, upper bounded by MAX_CLUSTERS)
 
             kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
@@ -161,22 +162,29 @@ if __name__ == "__main__":
             most_typical_idx = select_most_typical(embedding_dict, cluster_labels, K)
             print(most_typical_idx)
 
-            active_learning_embeddings[most_typical_idx] = embedding_dict[most_typical_idx]
+            # Select the most typical image and add it to the active learning set
+            most_typical_embedding = embedding_dict[most_typical_idx]
+            # active_learning_embeddings[most_typical_idx] = embedding_dict[most_typical_idx]
             embedding_dict.pop(most_typical_idx)
+            print(most_typical_embedding.keys())
+
+            with open(f"embeddings/{NUM_ITERATIONS}_iterations/embedding_{i}.pkl", "wb") as f: # One embedding per iteration
+                pickle.dump(most_typical_embedding, f)
 
             # Remap the embeddings:
             new_embedding_dict = {i: embedding_dict[key] for i, key in enumerate(embedding_dict.keys())}
             embedding_dict = new_embedding_dict
 
-        print(f"Number of embeddings in active learning set: {len(active_learning_embeddings)}")
-        
-        os.makedirs("embeddings", exist_ok=True)
-        with open(f"embeddings/active_learning_embeddings.pkl", "wb") as f:
-            pickle.dump(active_learning_embeddings, f)
+            num_active_learning_embeddings += 1
+
+        print(f"Number of embeddings in active learning set: {num_active_learning_embeddings}")
     
     else:
-        with open("embeddings/active_learning_embeddings.pkl", "rb") as f:
-            active_learning_embeddings = pickle.load(f)
+        num_active_learning_embeddings = 0
+        for i in range(len(os.listdir(f"embeddings/{NUM_ITERATIONS}_iterations"))):
+            with open(f"embeddings/{NUM_ITERATIONS}_iterations/embedding_{i}.pkl", "rb") as f:
+                embedding = pickle.load(f)
+                num_active_learning_embeddings += 1
 
-    print(f"No. of embeddings/images for new dataset: {len(active_learning_embeddings)}")
+    print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
     print("Done!")
