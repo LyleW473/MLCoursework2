@@ -170,14 +170,14 @@ def plot_by_true_labels(active_learning_embeddings, embedding_dict):
 
 def plot_by_log_density(active_learning_embeddings, embedding_dict):
     """
-    Plots the embeddings based on the log density of the embeddings.
+    Plots the embeddings based on the log density of the embeddings with cluster centers.
     """
     all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
     print(all_embeddings.shape)
 
     # Apply t-SNE for dimensionality reduction
     n_samples = all_embeddings.shape[0]
-    perplexity = min(30, n_samples - 1)  # Ensure perplexity is less than the number of samples
+    perplexity = min(30, n_samples - 1)
     print(perplexity)
 
     tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200, init="pca")
@@ -190,12 +190,27 @@ def plot_by_log_density(active_learning_embeddings, embedding_dict):
     # Apply log transformation to the density
     log_density = np.log(density)
 
+    # Apply KMeans clustering to find cluster centers
+    K = 10  # Number of clusters (adjust based on dataset)
+    kmeans = KMeans(n_clusters=K, random_state=42).fit(reduced_embeddings)
+    cluster_centers = kmeans.cluster_centers_
+
     # Plot the embeddings colored by log density
     plt.figure(figsize=(10, 8))
     plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], c=log_density, cmap='viridis', s=5)
     plt.colorbar(label='Log Density')
 
+    # Plot cluster centers
+    plt.scatter(
+                cluster_centers[:, 0], 
+                cluster_centers[:, 1],
+                c='black', 
+                marker='x', 
+                s=100, 
+                label='Cluster Center'
+                )
     plt.title('t-SNE of Embeddings Colored by Log Density')
+    plt.legend()
     plt.show()
 
 if __name__ == "__main__":
