@@ -131,6 +131,9 @@ if __name__ == "__main__":
             transformed_images = torch.stack([val_transforms(Image.fromarray(np.array(image))) for image in images])
             
             embeddings = model(transformed_images.cuda()).cpu().detach().numpy()
+            
+            # Normalise the embeddings (L2 Normalisation)
+            embeddings /= np.linalg.norm(embeddings, axis=1, keepdims=True)
 
             for j in range(embeddings.shape[0]):
                 embedding_dict[i * val_dl.batch_size + j] = {
