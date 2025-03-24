@@ -87,7 +87,7 @@ def select_most_typical(embedding_dict, cluster_labels, num_clusters, B, k_neigh
 
 def plot_by_cluster_assignment(active_learning_embeddings, embedding_dict):
     """
-    Plots the embeddings based on the cluster assignment of the images.
+    Plots the embeddings based on the cluster assignment of the images with cluster centers.
     """
     all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
     print(all_embeddings.shape)
@@ -96,20 +96,31 @@ def plot_by_cluster_assignment(active_learning_embeddings, embedding_dict):
     K = 10
     kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
     labels = kmeans.labels_
+    cluster_centers = kmeans.cluster_centers_
 
-    # Apply t-SNE for dimensionality reduction
-    n_samples = all_embeddings.shape[0]
+    # Combine embeddings and cluster centers
+    combined = np.vstack([all_embeddings, cluster_centers])
+
+    # Apply t-SNE on combined data
+    n_samples = combined.shape[0]
     perplexity = min(30, n_samples - 1)  # Ensure perplexity is less than the number of samples
     print(perplexity)
 
-    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200)
-    reduced_embeddings = tsne.fit_transform(all_embeddings)
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200, init="pca")
+    reduced_combined = tsne.fit_transform(combined)
+
+    # Split back into embeddings and cluster centers
+    reduced_embeddings = reduced_combined[:-K]  # First part is embeddings
+    reduced_centers = reduced_combined[-K:]  # Last part is cluster centers
 
     # Plot clusters by k-means assignment
     plt.figure(figsize=(10, 8))
     for i in range(K):
         cluster_points = reduced_embeddings[labels == i]
         plt.scatter(cluster_points[:, 0], cluster_points[:, 1], label=f'Cluster {i}', s=5)
+
+    # Plot cluster centers
+    plt.scatter(reduced_centers[:, 0], reduced_centers[:, 1], c='black', marker='x', s=100, label='Cluster Center')
 
     plt.title('t-SNE of Embeddings Colored by Cluster Assignment')
     plt.legend()
@@ -129,7 +140,7 @@ def plot_by_true_labels(active_learning_embeddings, embedding_dict):
     perplexity = min(30, n_samples - 1)  # Ensure perplexity is less than the number of samples
     print(perplexity)
 
-    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200)
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200, init="pca")
     reduced_embeddings = tsne.fit_transform(all_embeddings)
 
     # Plot clusters based on true labels
@@ -155,7 +166,7 @@ def plot_by_log_density(active_learning_embeddings, embedding_dict):
     perplexity = min(30, n_samples - 1)  # Ensure perplexity is less than the number of samples
     print(perplexity)
 
-    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200)
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200, init="pca")
     reduced_embeddings = tsne.fit_transform(all_embeddings)
 
     # Compute kernel density estimate (KDE)
@@ -310,6 +321,11 @@ if __name__ == "__main__":
                                 embedding_dict=embedding_dict
                                 )
     plot_by_true_labels(
+                        active_learning_embeddings=active_learning_embeddings,
+                        embedding_dict=embedding_dict
+                        )
+    
+    plot_by_log_density(
                         active_learning_embeddings=active_learning_embeddings,
                         embedding_dict=embedding_dict
                         )
