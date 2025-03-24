@@ -4,13 +4,10 @@ import torchvision
 import pickle
 import os
 import random
-import matplotlib.pyplot as plt
 
 from PIL import Image
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.neighbors import NearestNeighbors
-from sklearn.manifold import TSNE
-from scipy.stats import gaussian_kde
 
 from SCAN.utils.config import create_config
 from SCAN.utils.common_config import get_model, get_val_transformations
