@@ -128,27 +128,41 @@ def plot_by_cluster_assignment(active_learning_embeddings, embedding_dict):
 
 def plot_by_true_labels(active_learning_embeddings, embedding_dict):
     """
-    Plots the embeddings based on the true labels of the images.
+    Plots the embeddings based on the true labels of the images with cluster centers.
     """
-    
     all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
-    true_labels = np.array([embedding_dict[i]["label"] for i in range(len(active_learning_embeddings))]) # Extract true labels
+    true_labels = np.array([embedding_dict[i]["label"] for i in range(len(active_learning_embeddings))])
     print(all_embeddings.shape)
 
     # Apply t-SNE for dimensionality reduction
     n_samples = all_embeddings.shape[0]
-    perplexity = min(30, n_samples - 1)  # Ensure perplexity is less than the number of samples
+    perplexity = min(30, n_samples - 1)
     print(perplexity)
 
     tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200, init="pca")
     reduced_embeddings = tsne.fit_transform(all_embeddings)
 
+    # Compute cluster centers based on true labels
+    unique_labels = np.unique(true_labels)
+    cluster_centers = np.array([
+                                reduced_embeddings[true_labels == label].mean(axis=0) for label in unique_labels
+                                ])
+
     # Plot clusters based on true labels
     plt.figure(figsize=(10, 8))
-    unique_labels = np.unique(true_labels)
     for label in unique_labels:
         cluster_points = reduced_embeddings[true_labels == label]
         plt.scatter(cluster_points[:, 0], cluster_points[:, 1], label=f'Label {label}', s=5)
+
+    # Plot cluster centers
+    plt.scatter(
+                cluster_centers[:, 0],
+                cluster_centers[:, 1],
+                c='black', 
+                marker='x', 
+                s=100, 
+                label='Cluster Center'
+                )
 
     plt.title('t-SNE of Embeddings Colored by True Labels')
     plt.legend()
