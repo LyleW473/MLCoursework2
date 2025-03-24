@@ -10,6 +10,7 @@ from PIL import Image
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.neighbors import NearestNeighbors
 from sklearn.manifold import TSNE
+from scipy.stats import gaussian_kde
 
 from SCAN.utils.config import create_config
 from SCAN.utils.common_config import get_model, get_val_transformations
@@ -85,7 +86,9 @@ def select_most_typical(embedding_dict, cluster_labels, num_clusters, B, k_neigh
     return most_typical_indices
 
 def plot_by_cluster_assignment(active_learning_embeddings, embedding_dict):
-    
+    """
+    Plots the embeddings based on the cluster assignment of the images.
+    """
     all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
     print(all_embeddings.shape)
 
@@ -113,6 +116,9 @@ def plot_by_cluster_assignment(active_learning_embeddings, embedding_dict):
     plt.show()
 
 def plot_by_true_labels(active_learning_embeddings, embedding_dict):
+    """
+    Plots the embeddings based on the true labels of the images.
+    """
     
     all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
     true_labels = np.array([embedding_dict[i]["label"] for i in range(len(active_learning_embeddings))]) # Extract true labels
@@ -137,6 +143,36 @@ def plot_by_true_labels(active_learning_embeddings, embedding_dict):
     plt.legend()
     plt.show()
 
+def plot_by_log_density(active_learning_embeddings, embedding_dict):
+    """
+    Plots the embeddings based on the log density of the embeddings.
+    """
+    all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
+    print(all_embeddings.shape)
+
+    # Apply t-SNE for dimensionality reduction
+    n_samples = all_embeddings.shape[0]
+    perplexity = min(30, n_samples - 1)  # Ensure perplexity is less than the number of samples
+    print(perplexity)
+
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200)
+    reduced_embeddings = tsne.fit_transform(all_embeddings)
+
+    # Compute kernel density estimate (KDE)
+    kde = gaussian_kde(reduced_embeddings.T)
+    density = kde(reduced_embeddings.T)
+
+    # Apply log transformation to the density
+    log_density = np.log(density)
+
+    # Plot the embeddings colored by log density
+    plt.figure(figsize=(10, 8))
+    plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], c=log_density, cmap='viridis', s=5)
+    plt.colorbar(label='Log Density')
+
+    plt.title('t-SNE of Embeddings Colored by Log Density')
+    plt.show()
+
 if __name__ == "__main__":
 
     np.random.seed(2004)
@@ -145,8 +181,9 @@ if __name__ == "__main__":
 
     B = 50 # Number of new samples to query (active learning batch size)
     K = B
-    NUM_ITERATIONS = 10 # Also the number of total samples at the end.
+    NUM_ITERATIONS = 100
     MAX_CLUSTERS = 500
+    # Total number of samples at the end = NUM_ITERATIONS * B
 
     if not os.path.exists("embeddings/simclr_cifar10_embeddings.pkl"):
         print("Hello")
