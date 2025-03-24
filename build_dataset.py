@@ -4,10 +4,12 @@ import torchvision
 import pickle
 import os
 import random
+import matplotlib.pyplot as plt
 
 from PIL import Image
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.neighbors import NearestNeighbors
+from sklearn.manifold import TSNE
 
 from SCAN.utils.config import create_config
 from SCAN.utils.common_config import get_model, get_val_transformations
@@ -81,6 +83,34 @@ def select_most_typical(embedding_dict, cluster_labels, num_clusters, B, k_neigh
     
     print(most_typical_indices)
     return most_typical_indices
+
+def plot_by_cluster_assignment(active_learning_embeddings, embedding_dict):
+    
+    all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
+    print(all_embeddings.shape)
+
+    # Number of clusters (e.g., CIFAR-10)
+    K = 10
+    kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
+    labels = kmeans.labels_
+
+    # Apply t-SNE for dimensionality reduction
+    n_samples = all_embeddings.shape[0]
+    perplexity = min(30, n_samples - 1)  # Ensure perplexity is less than the number of samples
+    print(perplexity)
+
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200)
+    reduced_embeddings = tsne.fit_transform(all_embeddings)
+
+    # Plot clusters by k-means assignment
+    plt.figure(figsize=(10, 8))
+    for i in range(K):
+        cluster_points = reduced_embeddings[labels == i]
+        plt.scatter(cluster_points[:, 0], cluster_points[:, 1], label=f'Cluster {i}', s=5)
+
+    plt.title('KMeans Clusters (t-SNE)')
+    plt.legend()
+    plt.show()
 
 if __name__ == "__main__":
 
@@ -200,12 +230,20 @@ if __name__ == "__main__":
         
         print(f"Number of embeddings in active learning set: {num_active_learning_embeddings}")
     
-    else:
-        num_active_learning_embeddings = 0
-        for i in range(len(os.listdir(f"embeddings/{NUM_ITERATIONS}_iterations"))):
-            with open(f"embeddings/{NUM_ITERATIONS}_iterations/embedding_{i}.pkl", "rb") as f:
-                embedding = pickle.load(f)
-                num_active_learning_embeddings += 1
-
+    # Load the active learning embeddings
+    num_active_learning_embeddings = 0
+    active_learning_embeddings = {}
+    for i in range(len(os.listdir(f"embeddings/{NUM_ITERATIONS}_iterations"))):
+        with open(f"embeddings/{NUM_ITERATIONS}_iterations/embedding_{i}.pkl", "rb") as f:
+            embedding = pickle.load(f)
+            num_active_learning_embeddings += 1
+            active_learning_embeddings[i] = embedding
+    
     print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
     print("Done!")
+
+
+    plot_by_cluster_assignment(
+                                active_learning_embeddings=active_learning_embeddings,
+                                embedding_dict=embedding_dict
+                                )
