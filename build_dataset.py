@@ -35,7 +35,7 @@ Output:
 - The selected embeddings are saved to `embeddings/active_learning_embeddings.pkl` for further evaluation.
 """
 
-def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbours=20):
+def select_most_typical(embedding_dict, cluster_labels, num_clusters, B, k_neighbours=20):
     """
     Selects the most typical image from each cluster based on the typicality scores
     computed using the k-nearest neighbours algorithm.
@@ -44,33 +44,43 @@ def select_most_typical(embedding_dict, cluster_labels, num_clusters, k_neighbou
         embedding_dict (Dict[int, Dict[str, Any]]): A dictionary containing the embeddings of the images.
         cluster_labels (np.ndarray): The cluster labels assigned by the clustering algorithm.
         num_clusters (int): The number of clusters.
+        B (int): The number of most typical images to select at each iteration.
         k_neighbours (int): The number of neighbours to consider when computing the typicality scores.
                             Set to 20 by default, same as in the paper.
     """
 
-    # Find the largest cluster
-    largest_cluster_size = 0
-    largest_cluster_indices = []
-
+    # Create a dictionary of cluster IDs to image indices
+    cluster_dict = {}
     for cluster_id in range(num_clusters):
         cluster_indices = [i for i, label in enumerate(cluster_labels) if label == cluster_id]
         if len(cluster_indices) < 5:  # Drop clusters with fewer than 5 images
             continue
-        if len(cluster_indices) > largest_cluster_size:
-            largest_cluster_size = len(cluster_indices)
-            largest_cluster_indices = cluster_indices
+        cluster_dict[cluster_id] = cluster_indices
+    
+    # Sort the clusters by the length of the cluster
+    sorted_clusters = sorted(cluster_dict.items(), key=lambda x: len(x[1]), reverse=True)
 
-    # Select the largest cluster out of all clusters with more than 5 images
-    cluster_embeddings = np.array([embedding_dict[i]["embedding"] for i in largest_cluster_indices])
+    # Select the B largest clusters, selecting one image from each cluster
+    most_typical_indices = []
 
-    # Compute typicality scores for each image in the cluster
-    nbrs = NearestNeighbors(n_neighbors=min(k_neighbours, len(cluster_embeddings)), algorithm="auto").fit(cluster_embeddings)
-    distances, _ = nbrs.kneighbors(cluster_embeddings)
-    typicality_scores = 1 / np.mean(distances, axis=1)
+    for i in range(B):
+        if i >= len(sorted_clusters):
+            break
+        cluster_indices = sorted_clusters[i][1]
 
-    # Select the most typical image from the cluster
-    most_typical_idx = largest_cluster_indices[np.argmax(typicality_scores)]
-    return most_typical_idx
+        # Select the embeddings of the images in the cluster
+        cluster_embeddings = np.array([embedding_dict[i]["embedding"] for i in cluster_indices])
+
+        # Compute typicality scores for each image in the cluster
+        nbrs = NearestNeighbors(n_neighbors=min(k_neighbours, len(cluster_embeddings)), algorithm="auto").fit(cluster_embeddings)
+        distances, _ = nbrs.kneighbors(cluster_embeddings)
+        typicality_scores = 1 / np.mean(distances, axis=1)
+
+        most_typical_idx = cluster_indices[np.argmax(typicality_scores)]
+        most_typical_indices.append(most_typical_idx)
+    
+    print(most_typical_indices)
+    return most_typical_indices
 
 if __name__ == "__main__":
 
@@ -80,7 +90,7 @@ if __name__ == "__main__":
 
     B = 50 # Number of new samples to query (active learning batch size)
     K = B
-    NUM_ITERATIONS = 2500 # Also the number of total samples at the end.
+    NUM_ITERATIONS = 10 # Also the number of total samples at the end.
     MAX_CLUSTERS = 500
 
     if not os.path.exists("embeddings/simclr_cifar10_embeddings.pkl"):
@@ -142,7 +152,6 @@ if __name__ == "__main__":
         os.makedirs(f"embeddings/{NUM_ITERATIONS}_iterations", exist_ok=True)
 
         num_active_learning_embeddings = 0
-
         for i in range(NUM_ITERATIONS):
             print(f"Iteration: {i+1}/{NUM_ITERATIONS} | K: {K} | Number of embeddings: {num_active_learning_embeddings}")
 
@@ -157,31 +166,38 @@ if __name__ == "__main__":
             if K <= 50:
                 kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
             else:
-                kmeans = MiniBatchKMeans(n_clusters=K, batch_size=K * 10, random_state=42).fit(all_embeddings)
+                batch_size = min(max(256, K * 5), len(all_embeddings))
+                kmeans = MiniBatchKMeans(n_clusters=K, batch_size=batch_size, random_state=42).fit(all_embeddings)
             cluster_labels = kmeans.fit_predict(all_embeddings)
 
             # print(cluster_labels.shape)
             del all_embeddings
 
             # Add the most typical image to the active learning set
-            most_typical_idx = select_most_typical(embedding_dict, cluster_labels, K)
+            most_typical_indices = select_most_typical(
+                                                        embedding_dict=embedding_dict, 
+                                                        cluster_labels=cluster_labels, 
+                                                        num_clusters=K, 
+                                                        B=B
+                                                        )
             # print(most_typical_idx)
 
-            # Select the most typical image and add it to the active learning set
-            most_typical_embedding = embedding_dict[most_typical_idx]
-            # active_learning_embeddings[most_typical_idx] = embedding_dict[most_typical_idx]
-            embedding_dict.pop(most_typical_idx)
-            # print(most_typical_embedding.keys())
+            for most_typical_idx in most_typical_indices:
+                # Select the most typical image and add it to the active learning set
+                most_typical_embedding = embedding_dict[most_typical_idx]
+                # active_learning_embeddings[most_typical_idx] = embedding_dict[most_typical_idx]
+                embedding_dict.pop(most_typical_idx)
+                # print(most_typical_embedding.keys())
 
-            with open(f"embeddings/{NUM_ITERATIONS}_iterations/embedding_{i}.pkl", "wb") as f: # One embedding per iteration
-                pickle.dump(most_typical_embedding, f)
-
+                with open(f"embeddings/{NUM_ITERATIONS}_iterations/embedding_{num_active_learning_embeddings}.pkl", "wb") as f: # B embeddings per iteration
+                    pickle.dump(most_typical_embedding, f)
+                    
+                num_active_learning_embeddings += 1
+            
             # Remap the embeddings:
             new_embedding_dict = {i: embedding_dict[key] for i, key in enumerate(embedding_dict.keys())}
             embedding_dict = new_embedding_dict
-
-            num_active_learning_embeddings += 1
-
+        
         print(f"Number of embeddings in active learning set: {num_active_learning_embeddings}")
     
     else:
