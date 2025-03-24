@@ -108,7 +108,32 @@ def plot_by_cluster_assignment(active_learning_embeddings, embedding_dict):
         cluster_points = reduced_embeddings[labels == i]
         plt.scatter(cluster_points[:, 0], cluster_points[:, 1], label=f'Cluster {i}', s=5)
 
-    plt.title('KMeans Clusters (t-SNE)')
+    plt.title('t-SNE of Embeddings Colored by Cluster Assignment')
+    plt.legend()
+    plt.show()
+
+def plot_by_true_labels(active_learning_embeddings, embedding_dict):
+    
+    all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
+    true_labels = np.array([embedding_dict[i]["label"] for i in range(len(active_learning_embeddings))]) # Extract true labels
+    print(all_embeddings.shape)
+
+    # Apply t-SNE for dimensionality reduction
+    n_samples = all_embeddings.shape[0]
+    perplexity = min(30, n_samples - 1)  # Ensure perplexity is less than the number of samples
+    print(perplexity)
+
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity, learning_rate=200)
+    reduced_embeddings = tsne.fit_transform(all_embeddings)
+
+    # Plot clusters based on true labels
+    plt.figure(figsize=(10, 8))
+    unique_labels = np.unique(true_labels)
+    for label in unique_labels:
+        cluster_points = reduced_embeddings[true_labels == label]
+        plt.scatter(cluster_points[:, 0], cluster_points[:, 1], label=f'Label {label}', s=5)
+
+    plt.title('t-SNE of Embeddings Colored by True Labels')
     plt.legend()
     plt.show()
 
@@ -247,3 +272,7 @@ if __name__ == "__main__":
                                 active_learning_embeddings=active_learning_embeddings,
                                 embedding_dict=embedding_dict
                                 )
+    plot_by_true_labels(
+                        active_learning_embeddings=active_learning_embeddings,
+                        embedding_dict=embedding_dict
+                        )
