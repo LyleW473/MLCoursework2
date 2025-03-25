@@ -1,7 +1,8 @@
 import numpy as np
 import pickle
-from PIL import Image
+import os
 
+from PIL import Image
 from typing import List, Tuple
 
 def load_active_learning_embeddings(embeddings_dir:str) -> Tuple[List[Image.Image], List[np.ndarray]]:
@@ -14,7 +15,8 @@ def load_active_learning_embeddings(embeddings_dir:str) -> Tuple[List[Image.Imag
         embeddings_dir (str): The directory containing the embeddings of the images.
     """
     active_learning_embeddings = {}
-    for i in range(100):
+    num_embeddings = len(os.listdir(embeddings_dir))
+    for i in range(num_embeddings):
         with open(f"{embeddings_dir}/embedding_{i}.pkl", "rb") as f:
             embeddings = pickle.load(f)
             active_learning_embeddings[i] = embeddings
