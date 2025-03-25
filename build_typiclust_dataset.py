@@ -71,7 +71,6 @@ if __name__ == "__main__":
         print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
         print("Done!")
 
-
-        plot_by_cluster_assignment(active_learning_embeddings)
-        plot_by_true_labels(active_learning_embeddings)
-        plot_by_log_density(active_learning_embeddings)
+        # plot_by_cluster_assignment(active_learning_embeddings)
+        # plot_by_true_labels(active_learning_embeddings)
+        # plot_by_log_density(active_learning_embeddings)
