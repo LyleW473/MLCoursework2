@@ -140,3 +140,98 @@ def epoch_forward_pass(
     average_epoch_loss = running_loss / total_examples
     return average_epoch_loss, precision, recall, f1_score, accuracy
     
+def train_model(
+                model:torch.nn.Module,
+                criterion:torch.nn.Module,
+                optimiser:torch.optim.Optimizer,
+                scheduler:torch.optim.lr_scheduler._LRScheduler,
+                train_dl:torch.utils.data.DataLoader,
+                val_dl:torch.utils.data.DataLoader,
+                num_epochs:int,
+                classes:List[str],
+                device:Union[str, torch.device],
+                print_interval:int
+                ) -> torch.nn.Module:
+    for epoch in range(num_epochs):
+        model.train()
+        train_loss, train_precision, train_recall, train_f1_score, train_accuracy = epoch_forward_pass(
+                                                                                        model=model,
+                                                                                        criterion=criterion,
+                                                                                        optimiser=optimiser,
+                                                                                        data_loader=train_dl,
+                                                                                        epoch=epoch,
+                                                                                        num_batches=len(train_dl),
+                                                                                        classes=classes,
+                                                                                        device=device,
+                                                                                        print_interval=print_interval,
+                                                                                        mode="train"
+                                                                                        )
+        # Print metrics for each class:
+        print(f"Epoch: {epoch + 1}")
+        print(f"Training metrics")
+        print(f"Average train loss: {train_loss:.4f}")
+        for class_name in classes:
+            print(f"Class: {class_name} | Precision: {train_precision[class_name]:.2f} | Recall: {train_recall[class_name]:.2f} | F1 Score: {train_f1_score[class_name]:.2f} | Accuracy: {train_accuracy[class_name]:.2f}")
+        
+        # Validate model after each epoch
+        model.eval()
+        with torch.no_grad():
+            val_loss, val_precision, val_recall, val_f1_score, val_accuracy = epoch_forward_pass(
+                                                                                                model=model,
+                                                                                                criterion=criterion,
+                                                                                                optimiser=optimiser,
+                                                                                                data_loader=val_dl,
+                                                                                                epoch=epoch,
+                                                                                                num_batches=len(val_dl),
+                                                                                                classes=classes,
+                                                                                                device=device,
+                                                                                                print_interval=print_interval,
+                                                                                                mode="val"
+                                                                                                )
+        # Print metrics for each class:
+        print(f"Validation metrics")
+        print(f"Average val loss: {val_loss:.4f}")
+        for class_name in classes:
+            print(f"Class: {class_name} | Precision: {val_precision[class_name]:.2f} | Recall: {val_recall[class_name]:.2f} | F1 Score: {val_f1_score[class_name]:.2f} | Accuracy: {val_accuracy[class_name]:.2f}")
+        print("\n")
+
+        # Update scheduler after each epoch
+        scheduler.step()
+
+    return model
+
+def test_model(
+                model:torch.nn.Module,
+                test_dl:torch.utils.data.DataLoader,
+                classes:List[str],
+                device:Union[str, torch.device]
+                ):
+
+    total = {class_name: 0 for class_name in classes}
+    true_positive = defaultdict(int)
+    false_positive = defaultdict(int)
+    false_negative = defaultdict(int)
+
+    model.eval()
+
+    with torch.no_grad():
+        for data in test_dl:
+            images, labels = data
+
+            images = images.to(device)
+            labels = labels.to(device)
+
+            output = model(images)
+
+            _, predicted = torch.max(output, 1)
+            
+            for label, prediction in zip(labels, predicted):
+                total[classes[label]] += 1 # Track total for accuracy
+
+                if label == prediction:
+                    true_positive[classes[label]] += 1
+                else:
+                    false_positive[classes[prediction]] += 1 # Predicted class is wrong
+                    false_negative[classes[label]] += 1 # Actual class is wrong
+
+    return true_positive, false_positive, false_negative, total
