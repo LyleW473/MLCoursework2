@@ -5,11 +5,11 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 from scipy.stats import gaussian_kde
 
-def plot_by_cluster_assignment(active_learning_embeddings, embedding_dict):
+def plot_by_cluster_assignment(active_learning_embeddings):
     """
     Plots the embeddings based on the cluster assignment of the images with cluster centers.
     """
-    all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
+    all_embeddings = np.stack([embedding_dict["embedding"] for embedding_dict in active_learning_embeddings.values()])
     print(all_embeddings.shape)
 
     # Number of clusters (e.g., CIFAR-10)
@@ -46,12 +46,12 @@ def plot_by_cluster_assignment(active_learning_embeddings, embedding_dict):
     plt.legend()
     plt.show()
 
-def plot_by_true_labels(active_learning_embeddings, embedding_dict):
+def plot_by_true_labels(active_learning_embeddings):
     """
     Plots the embeddings based on the true labels of the images with cluster centers.
     """
-    all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
-    true_labels = np.array([embedding_dict[i]["label"] for i in range(len(active_learning_embeddings))])
+    all_embeddings = np.stack([embedding_dict["embedding"] for embedding_dict in active_learning_embeddings.values()])
+    true_labels = np.stack([embedding_dict["label"] for embedding_dict in active_learning_embeddings.values()])
     print(all_embeddings.shape)
 
     # Apply t-SNE for dimensionality reduction
@@ -88,11 +88,11 @@ def plot_by_true_labels(active_learning_embeddings, embedding_dict):
     plt.legend()
     plt.show()
 
-def plot_by_log_density(active_learning_embeddings, embedding_dict):
+def plot_by_log_density(active_learning_embeddings):
     """
     Plots the embeddings based on the log density of the embeddings with cluster centers.
     """
-    all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(active_learning_embeddings))])
+    all_embeddings = np.stack([embedding_dict["embedding"] for embedding_dict in active_learning_embeddings.values()])
     print(all_embeddings.shape)
 
     # Apply t-SNE for dimensionality reduction
