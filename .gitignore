@@ -4,4 +4,3 @@ data
 models
 simclr-checkpoints
 embeddings
-random_embeddings
