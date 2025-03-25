@@ -63,6 +63,7 @@ def perform_typiclust(
                     embedding_dict:Dict[int, Dict[str, np.ndarray]], 
                     num_iterations:int,
                     B:int,
+                    setting:str,
                     max_clusters:int=500
                     ) -> None:
     """
@@ -72,13 +73,14 @@ def perform_typiclust(
         embedding_dict (Dict[int, Dict[str, np.ndarray]]): A dictionary containing the embeddings of the images.
         num_iterations (int): Number of iterations to run the algorithm for.
         B (int): The budget, i.e., the number of images to add to the dataset pool at each iteration.
+        setting (str): The setting i.e., (top / bottom) in the paper.
         max_clusters (int): The maximum number of clusters at one point, 
 
     """
 
     # Perform K-Means Clustering on the embeddings
-    if not os.path.exists(f"embeddings/{num_iterations}_iterations"):
-        os.makedirs(f"embeddings/{num_iterations}_iterations", exist_ok=True)
+    if not os.path.exists(f"embeddings/typiclust/{setting}/{num_iterations}_iterations_B{B}"):
+        os.makedirs(f"embeddings/typiclust/{setting}/{num_iterations}_iterations_B{B}", exist_ok=True)
 
         num_active_learning_embeddings = 0
 
@@ -118,7 +120,7 @@ def perform_typiclust(
                 embedding_dict.pop(most_typical_idx)
                 # print(most_typical_embedding.keys())
 
-                with open(f"embeddings/{num_iterations}_iterations/embedding_{num_active_learning_embeddings}.pkl", "wb") as f: # B embeddings per iteration
+                with open(f"embeddings/typiclust/{setting}/{num_iterations}_iterations_B{B}/embedding_{num_active_learning_embeddings}.pkl", "wb") as f: # B embeddings per iteration
                     pickle.dump(most_typical_embedding, f)
                     
                 num_active_learning_embeddings += 1
