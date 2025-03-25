@@ -4,19 +4,33 @@ import torch.nn as nn
 from collections import defaultdict
 from torchvision.models import resnet18
 from torchvision.models.resnet import ResNet18_Weights
+from typing import Dict, List, Union, Tuple
 
 def create_resnet18_model():
+    """
+    Returns a ResNet-18 model with the final layer adapted to CIFAR-10 classes.
+    """
     model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
     model.fc = nn.Linear(512, 10) # Adapt final layer to CIFAR-10 classes
     return model
 
 def calculate_metrics(
-                    true_positive, 
-                    false_positive, 
-                    false_negative, 
-                    total, 
-                    classes
+                    true_positive: Dict[str, int],
+                    false_positive: Dict[str, int],
+                    false_negative: Dict[str, int],
+                    total:Dict[str, int],
+                    classes: List[str]
                     ):
+    """
+    Calculate the precision, recall, f1 score, and accuracy for each class.
+
+    Args:
+        true_positive (Dict[str, int]): The number of true positives for each class.
+        false_positive (Dict[str, int]): The number of false positives for each class.
+        false_negative (Dict[str, int]): The number of false negatives for each class.
+        total (Dict[str, int]): The total number of examples for each class.
+        classes (List[str]): The list of class names.
+    """
     precision = {}
     recall = {}
     f1_score = {}
@@ -46,17 +60,32 @@ def calculate_metrics(
     return precision, recall, f1_score, accuracy
 
 def epoch_forward_pass(
-                    model, 
-                    criterion, 
-                    optimiser, 
-                    data_loader, 
-                    epoch, 
-                    num_batches, 
-                    classes, 
-                    device, 
-                    print_interval, 
-                    mode="train"
-                    ):
+                    model:torch.nn.Module,
+                    criterion:torch.nn.Module,
+                    optimiser:torch.optim.Optimizer,
+                    data_loader:torch.utils.data.DataLoader,
+                    epoch:int,
+                    num_batches:int,
+                    classes:List[str],
+                    device:Union[str, torch.device],
+                    print_interval:int,
+                    mode:str="train"
+                    ) -> Tuple[float, Dict[str, float], Dict[str, float], Dict[str, float], Dict[str, float]]:
+    """
+    Helper function to perform a forward pass for a single epoch.
+
+    Args:
+        model (torch.nn.Module): The model to train or evaluate.
+        criterion (torch.nn.Module): The loss function to use.
+        optimiser (torch.optim.Optimizer): The optimiser to use.
+        data_loader (torch.utils.data.DataLoader): The data loader to use.
+        epoch (int): The current epoch number.
+        num_batches (int): The number of batches in the data loader.
+        classes (List[str]): The list of class names.
+        device (Union[str, torch.device]): The device to use.
+        print_interval (int): The interval to print the loss.
+        mode (str): The mode to use. Either "train" or "val".
+    """
 
     total = {class_name: 0 for class_name in classes}
     true_positive = defaultdict(int)
