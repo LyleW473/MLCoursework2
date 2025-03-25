@@ -5,7 +5,7 @@ import os
 from PIL import Image
 from typing import List, Tuple
 
-def load_active_learning_embeddings(embeddings_dir:str) -> Tuple[List[Image.Image], List[np.ndarray]]:
+def load_active_learning_embeddings(embeddings_dir:str) -> Tuple[List[Image.Image], List[np.ndarray], List[np.ndarray]]:
     """
     Loads the embeddings of the images from the active learning dataset.
     - The embeddings are stored in a dictionary with the image index as the key.
@@ -25,13 +25,16 @@ def load_active_learning_embeddings(embeddings_dir:str) -> Tuple[List[Image.Imag
 
     all_images = []
     all_labels = []
+    all_embeddings = []
     for key, value_dict in active_learning_embeddings.items():
         image = value_dict["image"]
         print(image.flatten().min(), image.flatten().max())
         image = Image.fromarray(image.astype("uint8")) # Convert to PIL image
         label = np.array(value_dict["label"]) # Convert scalar to 1D array
+        embedding = value_dict["embedding"]
         print(np.array(image).shape, label.shape)
         all_images.append(image)
         all_labels.append(label)
+        all_embeddings.append(embedding)
 
-    return all_images, all_labels
+    return all_images, all_labels, all_embeddings
