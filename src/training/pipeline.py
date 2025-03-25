@@ -7,14 +7,13 @@ import pickle
 
 from sklearn.model_selection import train_test_split
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Union, Tuple
 
 from src.utils import load_active_learning_embeddings
 from src.training.engine import create_resnet18_model, train_model, test_model, calculate_metrics
 from src.training.dataset import CustomDataset
 
 class TrainingPipeline:
-
     def __init__(
                 self, 
                 training_settings:Dict[str, Any],
@@ -22,12 +21,21 @@ class TrainingPipeline:
                 transform:torchvision.transforms.Compose, 
                 device:Union[str, torch.device]
                 ):
+        """
+        Initialises the TrainingPipeline object with the training settings, classes, transform and device.
+
+        Args:
+            training_settings (Dict[str, Any]): The training settings for the model.
+            classes (List[str]): The list of classes in the dataset.
+            transform (torchvision.transforms.Compose): The transform to apply to the images.
+            device (Union[str, torch.device]): The device to run the training on.
+        """
         self.training_settings = training_settings
         self.classes = classes
         self.transform = transform
         self.device = device
     
-    def load_data(self, embeddings_dir:str):
+    def load_data(self, embeddings_dir:str) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
 
         all_images, all_labels, _ = load_active_learning_embeddings(embeddings_dir)
 
@@ -49,7 +57,10 @@ class TrainingPipeline:
 
         return train_dl, val_dl, test_dl
     
-    def initialise_components(self):
+    def initialise_components(self) -> Tuple[torch.nn.Module, torch.nn.Module, torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
+        """
+        Initialises the model, criterion, optimiser and scheduler.
+        """
         model = create_resnet18_model()
         model = model.to(self.device)
         criterion = nn.CrossEntropyLoss()
@@ -58,8 +69,16 @@ class TrainingPipeline:
 
         return model, criterion, optimiser, scheduler
 
-    def execute(self, version:str, setting:str, embeddings_dir:str):
+    def execute(self, version:str, setting:str, embeddings_dir:str) -> None:
+        """
+        Executes a single training run for the given version and setting, using the embeddings in the given directory.
 
+        Args:
+            version (str): The version of the model.
+            setting (str): The setting of the model.
+            embeddings_dir (str): The directory containing the embeddings of the images.
+        
+        """
         train_dl, val_dl, test_dl = self.load_data(embeddings_dir=embeddings_dir)
 
         model, criterion, optimiser, scheduler = self.initialise_components()
