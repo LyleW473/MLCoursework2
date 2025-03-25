@@ -42,14 +42,14 @@ if __name__ == "__main__":
 
             for i, rand_idx in enumerate(random_indices):
                 random_embedding = embedding_dict[rand_idx]
-                with open(f"embeddings/random/{setting}/{num_iterations}_iterations/embedding_{i}_B{B}.pkl", "wb") as f:
+                with open(f"embeddings/random/{setting}/{num_iterations}_iterations/embedding_{i}.pkl", "wb") as f:
                     pickle.dump(random_embedding, f)
 
             # Load the active learning embeddings
             num_active_learning_embeddings = 0
             active_learning_embeddings = {}
             for i in range(num_iterations * B):
-                with open(f"embeddings/random/{setting}/{num_iterations}_iterations/embedding_{i}_B{B}.pkl", "rb") as f:
+                with open(f"embeddings/random/{setting}/{num_iterations}_iterations/embedding_{i}.pkl", "rb") as f:
                     embedding = pickle.load(f)
                     num_active_learning_embeddings += 1
                     active_learning_embeddings[i] = embedding

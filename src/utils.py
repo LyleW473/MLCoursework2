@@ -21,18 +21,18 @@ def load_active_learning_embeddings(embeddings_dir:str) -> Tuple[List[Image.Imag
             embeddings = pickle.load(f)
             active_learning_embeddings[i] = embeddings
 
-    print("Embeddings shape:", len(active_learning_embeddings))
+    # print("Embeddings shape:", len(active_learning_embeddings))
 
     all_images = []
     all_labels = []
     all_embeddings = []
     for key, value_dict in active_learning_embeddings.items():
         image = value_dict["image"]
-        print(image.flatten().min(), image.flatten().max())
+        # print(image.flatten().min(), image.flatten().max())
         image = Image.fromarray(image.astype("uint8")) # Convert to PIL image
         label = np.array(value_dict["label"]) # Convert scalar to 1D array
         embedding = value_dict["embedding"]
-        print(np.array(image).shape, label.shape)
+        # print(np.array(image).shape, label.shape)
         all_images.append(image)
         all_labels.append(label)
         all_embeddings.append(embedding)
