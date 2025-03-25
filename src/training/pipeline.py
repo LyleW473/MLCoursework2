@@ -137,5 +137,5 @@ class TrainingPipeline:
         print("Completed training for version:", version, "and setting:", setting)
 
         # Save the completed dict in the same location (overwrite)
-        with open(f"{MODEL_SAVE_DIR}/completed_{version}_{setting}_{iterations_and_b_setting}.pkl", "wb") as f:
-            pickle.dump(completed_dict, f)
+        with open(f"{MODEL_SAVE_DIR}/completed_{version}_{setting}_{iterations_and_b_setting}.pth", "wb") as f:
+            torch.save(completed_dict, f)
