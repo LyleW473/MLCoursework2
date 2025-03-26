@@ -178,10 +178,13 @@ class LinearEvalPipeline:
         val_set = LinearEvalDataset(embeddings=val_embeddings, labels=val_labels, transform=self.transform)
         val_dl = torch.utils.data.DataLoader(val_set, batch_size=self.training_settings["batch_size"], shuffle=False, num_workers=0)
 
-        raise NotImplementedError("Need to replace test set with generated test set embeddings")
-        test_set = torchvision.datasets.CIFAR10(root="./data", train=False, download=True, transform=self.transform)
-        test_dl = torch.utils.data.DataLoader(test_set, batch_size=self.training_settings["batch_size"], shuffle=False, num_workers=2)
 
+        with open("embeddings/simclr_cifar10_test_embeddings.pkl", "rb") as f:
+            test_embeddings_dict = pickle.load(f)
+        test_embeddings = [test_embeddings_dict[i]["embedding"] for i in range(len(test_embeddings_dict))]
+        test_labels = [test_embeddings_dict[i]["label"] for i in range(len(test_embeddings_dict))]
+        test_set = LinearEvalDataset(embeddings=test_embeddings, labels=test_labels, transform=self.transform)
+        test_dl = torch.utils.data.DataLoader(test_set, batch_size=self.training_settings["batch_size"], shuffle=False, num_workers=2)
         return train_dl, val_dl, test_dl
 
     def initialise_components(self) -> Tuple[torch.nn.Module, torch.nn.Module, torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:

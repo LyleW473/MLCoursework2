@@ -36,12 +36,25 @@ def create_simclr_embeddings() -> Dict[int, Dict[str, np.ndarray]]:
     
     val_set = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=standard_transform) # Using the train set for creating the embeddings
     val_dl = torch.utils.data.DataLoader(val_set, batch_size=2, shuffle=True)
+
+    test_set = torchvision.datasets.CIFAR10(root="./data", train=False, download=True, transform=standard_transform) # Generate embeddings for the test set as well (for linear evaluation)
+    test_dl = torch.utils.data.DataLoader(test_set, batch_size=2, shuffle=True)
     
+    train_embedding_dict = generate_embeddings_dict(model, val_dl, val_transforms)
+    test_embedding_dict = generate_embeddings_dict(model, test_dl, val_transforms)
+
+    return train_embedding_dict, test_embedding_dict
+
+def generate_embeddings_dict(
+                            model:torch.nn.Module, 
+                            dataloader:torch.utils.data.DataLoader, 
+                            transforms:torchvision.transforms.Compose
+                            ) -> Dict[int, Dict[str, np.ndarray]]:
     embedding_dict = {}
-    for i, (images, labels) in enumerate(val_dl):
+    for i, (images, labels) in enumerate(dataloader):
 
         # Use transformed images for creating the embeddings
-        transformed_images = torch.stack([val_transforms(Image.fromarray(np.array(image))) for image in images])
+        transformed_images = torch.stack([transforms(Image.fromarray(np.array(image))) for image in images])
         
         embeddings = model(transformed_images.cuda()).cpu().detach().numpy()
         
@@ -49,13 +62,13 @@ def create_simclr_embeddings() -> Dict[int, Dict[str, np.ndarray]]:
         embeddings /= np.linalg.norm(embeddings, axis=1, keepdims=True)
 
         for j in range(embeddings.shape[0]):
-            embedding_dict[i * val_dl.batch_size + j] = {
+            embedding_dict[i * dataloader.batch_size + j] = {
                                                         "embedding": embeddings[j],
                                                         "image": np.array(images[j]), # Store original image
                                                         "label": np.array(labels[j])
                                                         }
             
-        print(f"Batch: {i+1}/{len(val_dl)}")
+        print(f"Batch: {i+1}/{len(dataloader)}")
 
     return embedding_dict
 
@@ -63,20 +76,24 @@ def get_simclr_embeddings() -> Dict[int, Dict[str, np.ndarray]]:
     """
     Loads or creates the embeddings of the CIFAR-10 dataset using the pre-trained SimCLR model,
     depending on whether the embeddings are already saved.
+
+    Returns only the training embeddings.
     """
-    if not os.path.exists("embeddings/simclr_cifar10_embeddings.pkl"):
+    if not (os.path.exists("embeddings/simclr_cifar10_embeddings.pkl") and os.path.exists("embeddings/simclr_cifar10_test_embeddings.pkl")):
         print("Hello")
-        embedding_dict = create_simclr_embeddings()
+        train_embedding_dict, test_embedding_dict = create_simclr_embeddings()
 
         # Save the embeddings
         os.makedirs("embeddings", exist_ok=True)
         with open("embeddings/simclr_cifar10_embeddings.pkl", "wb") as f:
-            pickle.dump(embedding_dict, f)
-
+            pickle.dump(train_embedding_dict, f)
+            
+        with open("embeddings/simclr_cifar10_test_embeddings.pkl", "wb") as f:
+            pickle.dump(test_embedding_dict, f)
     else:
         with open("embeddings/simclr_cifar10_embeddings.pkl", "rb") as f:
-            embedding_dict = pickle.load(f)
+            train_embedding_dict = pickle.load(f)
 
-        print(f"Number of embeddings: {len(embedding_dict)}")
-        print(embedding_dict[0].keys())
-    return embedding_dict
+        print(f"Number of embeddings: {len(train_embedding_dict)}")
+        print(train_embedding_dict[0].keys())
+    return train_embedding_dict
