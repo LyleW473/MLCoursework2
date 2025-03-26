@@ -31,7 +31,7 @@ def load_active_learning_embeddings(embeddings_dir:str) -> Tuple[List[Image.Imag
         # print(image.flatten().min(), image.flatten().max())
         image = Image.fromarray(image.astype("uint8")) # Convert to PIL image
         label = np.array(value_dict["label"]) # Convert scalar to 1D array
-        embedding = value_dict["embedding"]
+        embedding = np.array(value_dict["embedding"])
         # print(np.array(image).shape, label.shape)
         all_images.append(image)
         all_labels.append(label)

@@ -4,3 +4,4 @@ data
 models
 simclr-checkpoints
 embeddings
+linear_eval_models
