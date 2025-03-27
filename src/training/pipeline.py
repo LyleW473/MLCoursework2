@@ -69,7 +69,7 @@ class FullySupervisedTrainingPipeline:
 
         return model, criterion, optimiser, scheduler
 
-    def execute(self, version:str, setting:str, embeddings_dir:str) -> None:
+    def execute(self, model_name:str, version:str, setting:str, embeddings_dir:str) -> None:
         """
         Executes a single training run for the given version and setting, using the embeddings in the given directory.
 
@@ -101,7 +101,7 @@ class FullySupervisedTrainingPipeline:
         iterations_and_b_setting = split_dir[-1]
         MODEL_SAVE_DIR = "models"
         os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
-        model_path = f"{MODEL_SAVE_DIR}/resnet18_{version}_{setting}_{iterations_and_b_setting}.pth"
+        model_path = f"{MODEL_SAVE_DIR}/resnet18_{model_name}_{version}_{setting}_{iterations_and_b_setting}.pth"
         torch.save(model.state_dict(), model_path)
 
         # Test model
@@ -137,7 +137,7 @@ class FullySupervisedTrainingPipeline:
         print("Completed training for version:", version, "and setting:", setting)
 
         # Save the completed dict in the same location (overwrite)
-        with open(f"{MODEL_SAVE_DIR}/completed_{version}_{setting}_{iterations_and_b_setting}.pth", "wb") as f:
+        with open(f"{MODEL_SAVE_DIR}/completed_{model_name}_{version}_{setting}_{iterations_and_b_setting}.pth", "wb") as f:
             torch.save(completed_dict, f)
 
 class LinearEvalPipeline:
