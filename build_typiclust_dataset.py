@@ -26,16 +26,16 @@ This script performs active learning using the TypiClust algorithm on the CIFAR-
     - The number of clusters is adjusted dynamically using `K = min(L + B, MAX_CLUSTERS)`, 
       where `L` is the number of already labeled samples and `B` is the batch size.
 
-Output:
-- The selected embeddings are saved to `embeddings/active_learning_embeddings.pkl` for further evaluation.
 """
 
 
 if __name__ == "__main__":
 
+    model_names = ["simclr", "dino"]
     settings = {
-            "top": {"B": 10, "dataset_sizes": [10, 20, 30, 40, 50, 60]},
-            "bottom": {"B": 50, "dataset_sizes": [50, 100, 150, 200, 250, 300]}
+            # "top": {"B": 10, "dataset_sizes": [10, 20, 30, 40, 50, 60]},
+            # "bottom": {"B": 50, "dataset_sizes": [50, 100, 150, 200, 250, 300]}
+            "bottom": {"B": 50, "dataset_sizes": [300]}
             } # B = Number of new samples to query (active learning batch size)
     
     MAX_CLUSTERS = 500
@@ -53,34 +53,37 @@ if __name__ == "__main__":
 
             num_iterations = num_iterations_for_sizes[x]
 
-            np.random.seed(2004)
-            torch.manual_seed(2004)
-            random.seed(2004)
+            for model_name in model_names:
 
-            # Total number of samples at the end = NUM_ITERATIONS * B
-            embedding_dict = get_embeddings(model_name="simclr")
+                np.random.seed(2004)
+                torch.manual_seed(2004)
+                random.seed(2004)
 
-            perform_typiclust(
-                            embedding_dict=embedding_dict,
-                            num_iterations=num_iterations,
-                            B=B,
-                            setting=setting,
-                            max_clusters=MAX_CLUSTERS
-                            )
-            del embedding_dict
+                # Total number of samples at the end = NUM_ITERATIONS * B
+                embedding_dict = get_embeddings(model_name=model_name)
 
-            # Load the active learning embeddings
-            num_active_learning_embeddings = 0
-            active_learning_embeddings = {}
-            for i in range(num_iterations * B):
-                with open(f"embeddings/typiclust/{setting}/{num_iterations}_iterations_B{B}/embedding_{i}.pkl", "rb") as f:
-                    embedding = pickle.load(f)
-                    num_active_learning_embeddings += 1
-                    active_learning_embeddings[i] = embedding
-            
-            print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
-            print("Done!")
+                base_path = f"embeddings/{model_name}/typiclust/{setting}/{num_iterations}_iterations_B{B}"
+                perform_typiclust(
+                                embedding_dict=embedding_dict,
+                                num_iterations=num_iterations,
+                                B=B,
+                                base_path=base_path,
+                                max_clusters=MAX_CLUSTERS
+                                )
+                del embedding_dict
 
-            # plot_by_cluster_assignment(active_learning_embeddings)
-            # plot_by_true_labels(active_learning_embeddings)
-            # plot_by_log_density(active_learning_embeddings)
+                # Load the active learning embeddings
+                num_active_learning_embeddings = 0
+                active_learning_embeddings = {}
+                for i in range(num_iterations * B):
+                    with open(f"{base_path}/embedding_{i}.pkl", "rb") as f:
+                        embedding = pickle.load(f)
+                        num_active_learning_embeddings += 1
+                        active_learning_embeddings[i] = embedding
+                
+                print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
+                print("Done!")
+
+                plot_by_cluster_assignment(active_learning_embeddings)
+                plot_by_true_labels(active_learning_embeddings)
+                plot_by_log_density(active_learning_embeddings)

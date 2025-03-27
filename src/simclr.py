@@ -38,10 +38,10 @@ def create_simclr_embeddings() -> Dict[int, Dict[str, np.ndarray]]:
         return np.array(image)
     
     val_set = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=standard_transform) # Using the train set for creating the embeddings
-    val_dl = torch.utils.data.DataLoader(val_set, batch_size=2, shuffle=True)
+    val_dl = torch.utils.data.DataLoader(val_set, batch_size=512, shuffle=True)
 
     test_set = torchvision.datasets.CIFAR10(root="./data", train=False, download=True, transform=standard_transform) # Generate embeddings for the test set as well (for linear evaluation)
-    test_dl = torch.utils.data.DataLoader(test_set, batch_size=2, shuffle=True)
+    test_dl = torch.utils.data.DataLoader(test_set, batch_size=512, shuffle=True)
     
     train_embedding_dict = generate_embeddings_dict(model, val_dl, val_transforms)
     test_embedding_dict = generate_embeddings_dict(model, test_dl, val_transforms)

@@ -63,7 +63,7 @@ def perform_typiclust(
                     embedding_dict:Dict[int, Dict[str, np.ndarray]], 
                     num_iterations:int,
                     B:int,
-                    setting:str,
+                    base_path:str,
                     max_clusters:int=500
                     ) -> None:
     """
@@ -79,8 +79,8 @@ def perform_typiclust(
     """
 
     # Perform K-Means Clustering on the embeddings
-    if not os.path.exists(f"embeddings/typiclust/{setting}/{num_iterations}_iterations_B{B}"):
-        os.makedirs(f"embeddings/typiclust/{setting}/{num_iterations}_iterations_B{B}", exist_ok=True)
+    if not os.path.exists(base_path):
+        os.makedirs(base_path, exist_ok=True)
 
         num_active_learning_embeddings = 0
 
@@ -120,7 +120,7 @@ def perform_typiclust(
                 embedding_dict.pop(most_typical_idx)
                 # print(most_typical_embedding.keys())
 
-                with open(f"embeddings/typiclust/{setting}/{num_iterations}_iterations_B{B}/embedding_{num_active_learning_embeddings}.pkl", "wb") as f: # B embeddings per iteration
+                with open(f"{base_path}/embedding_{num_active_learning_embeddings}.pkl", "wb") as f: # B embeddings per iteration
                     pickle.dump(most_typical_embedding, f)
                     
                 num_active_learning_embeddings += 1
