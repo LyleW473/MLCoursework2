@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import pickle
 import random
+import os
 
 from src.plot_functions import plot_by_cluster_assignment, plot_by_true_labels, plot_by_log_density
 from src.simclr import get_embeddings
@@ -57,29 +58,31 @@ if __name__ == "__main__":
                 base_path = f"embeddings/{model_name}/typiclust/{setting}/{num_iterations}_iterations_B{B}"#
 
                 # Total number of samples at the end = NUM_ITERATIONS * B
-                embedding_dict = get_embeddings(model_name=model_name)
+                if not os.path.exists(base_path):
+                    os.makedirs(base_path, exist_ok=True)
+                    embedding_dict = get_embeddings(model_name=model_name)
 
-                perform_typiclust(
-                                embedding_dict=embedding_dict,
-                                num_iterations=num_iterations,
-                                B=B,
-                                base_path=base_path,
-                                max_clusters=MAX_CLUSTERS
-                                )
-                del embedding_dict
+                    perform_typiclust(
+                                    embedding_dict=embedding_dict,
+                                    num_iterations=num_iterations,
+                                    B=B,
+                                    base_path=base_path,
+                                    max_clusters=MAX_CLUSTERS
+                                    )
+                    del embedding_dict
+                else:
+                    # Load the active learning embeddings
+                    num_active_learning_embeddings = 0
+                    active_learning_embeddings = {}
+                    for i in range(num_iterations * B):
+                        with open(f"{base_path}/embedding_{i}.pkl", "rb") as f:
+                            embedding = pickle.load(f)
+                            num_active_learning_embeddings += 1
+                            active_learning_embeddings[i] = embedding
+                    
+                    print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
+                    print("Done!")
 
-                # Load the active learning embeddings
-                num_active_learning_embeddings = 0
-                active_learning_embeddings = {}
-                for i in range(num_iterations * B):
-                    with open(f"{base_path}/embedding_{i}.pkl", "rb") as f:
-                        embedding = pickle.load(f)
-                        num_active_learning_embeddings += 1
-                        active_learning_embeddings[i] = embedding
-                
-                print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
-                print("Done!")
-
-                # plot_by_cluster_assignment(active_learning_embeddings)
-                # plot_by_true_labels(active_learning_embeddings)
-                # plot_by_log_density(active_learning_embeddings)
+                    plot_by_cluster_assignment(active_learning_embeddings)
+                    plot_by_true_labels(active_learning_embeddings)
+                    plot_by_log_density(active_learning_embeddings)

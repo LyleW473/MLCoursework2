@@ -79,56 +79,53 @@ def perform_typiclust(
     """
 
     # Perform K-Means Clustering on the embeddings
-    if not os.path.exists(base_path):
-        os.makedirs(base_path, exist_ok=True)
+    num_active_learning_embeddings = 0
 
-        num_active_learning_embeddings = 0
+    for i in range(num_iterations):
 
-        for i in range(num_iterations):
+        # Concatenate the embeddings
+        all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
+        # print(all_embeddings.shape)
+        
+        L_i_1 = num_active_learning_embeddings # Number of embeddings already labelled
+        K = min(L_i_1 + B, max_clusters) # Update K (same as paper, upper bounded by MAX_CLUSTERS)
 
-            # Concatenate the embeddings
-            all_embeddings = np.array([embedding_dict[i]["embedding"] for i in range(len(embedding_dict))])
-            # print(all_embeddings.shape)
-            
-            L_i_1 = num_active_learning_embeddings # Number of embeddings already labelled
-            K = min(L_i_1 + B, max_clusters) # Update K (same as paper, upper bounded by MAX_CLUSTERS)
+        # In paper, states K <= 50, use KMeans, else use MiniBatchKMeans
+        if K <= 50:
+            kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
+        else:
+            batch_size = min(max(256, K * 5), len(all_embeddings))
+            kmeans = MiniBatchKMeans(n_clusters=K, batch_size=batch_size, random_state=42).fit(all_embeddings)
+        cluster_labels = kmeans.fit_predict(all_embeddings)
 
-            # In paper, states K <= 50, use KMeans, else use MiniBatchKMeans
-            if K <= 50:
-                kmeans = KMeans(n_clusters=K, random_state=42).fit(all_embeddings)
-            else:
-                batch_size = min(max(256, K * 5), len(all_embeddings))
-                kmeans = MiniBatchKMeans(n_clusters=K, batch_size=batch_size, random_state=42).fit(all_embeddings)
-            cluster_labels = kmeans.fit_predict(all_embeddings)
+        # print(cluster_labels.shape)
+        del all_embeddings
 
-            # print(cluster_labels.shape)
-            del all_embeddings
+        # Add the most typical image to the active learning set
+        most_typical_indices = select_most_typical(
+                                                    embedding_dict=embedding_dict, 
+                                                    cluster_labels=cluster_labels, 
+                                                    num_clusters=K, 
+                                                    B=B
+                                                    )
+        # print(most_typical_idx)
 
-            # Add the most typical image to the active learning set
-            most_typical_indices = select_most_typical(
-                                                        embedding_dict=embedding_dict, 
-                                                        cluster_labels=cluster_labels, 
-                                                        num_clusters=K, 
-                                                        B=B
-                                                        )
-            # print(most_typical_idx)
+        for most_typical_idx in most_typical_indices:
+            # Select the most typical image and add it to the active learning set
+            most_typical_embedding = embedding_dict[most_typical_idx]
+            # active_learning_embeddings[most_typical_idx] = embedding_dict[most_typical_idx]
+            embedding_dict.pop(most_typical_idx)
+            # print(most_typical_embedding.keys())
 
-            for most_typical_idx in most_typical_indices:
-                # Select the most typical image and add it to the active learning set
-                most_typical_embedding = embedding_dict[most_typical_idx]
-                # active_learning_embeddings[most_typical_idx] = embedding_dict[most_typical_idx]
-                embedding_dict.pop(most_typical_idx)
-                # print(most_typical_embedding.keys())
+            with open(f"{base_path}/embedding_{num_active_learning_embeddings}.pkl", "wb") as f: # B embeddings per iteration
+                pickle.dump(most_typical_embedding, f)
+                
+            num_active_learning_embeddings += 1
+        
+        # Remap the embeddings:
+        new_embedding_dict = {i: embedding_dict[key] for i, key in enumerate(embedding_dict.keys())}
+        embedding_dict = new_embedding_dict
 
-                with open(f"{base_path}/embedding_{num_active_learning_embeddings}.pkl", "wb") as f: # B embeddings per iteration
-                    pickle.dump(most_typical_embedding, f)
-                    
-                num_active_learning_embeddings += 1
-            
-            # Remap the embeddings:
-            new_embedding_dict = {i: embedding_dict[key] for i, key in enumerate(embedding_dict.keys())}
-            embedding_dict = new_embedding_dict
+        print(f"Iteration: {i+1}/{num_iterations} | K: {K} | Number of embeddings: {num_active_learning_embeddings}")
 
-            print(f"Iteration: {i+1}/{num_iterations} | K: {K} | Number of embeddings: {num_active_learning_embeddings}")
-
-        print(f"Number of embeddings in active learning set: {num_active_learning_embeddings}")
+    print(f"Number of embeddings in active learning set: {num_active_learning_embeddings}")

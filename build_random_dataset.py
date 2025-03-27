@@ -32,35 +32,39 @@ if __name__ == "__main__":
                 torch.manual_seed(2004)
                 random.seed(2004)
 
-                # Total number of samples at the end = NUM_ITERATIONS * B
-                embedding_dict = get_embeddings(model_name=model_name)
 
                 base_path = f"embeddings/{model_name}/random/{setting}/{num_iterations}_iterations_B{B}"
 
-                # Select random embeddings
-                os.makedirs(base_path, exist_ok=True)
 
-                num_samples_to_select = dataset_sizes[x]
-                total_samples = len(embedding_dict)
-                random_indices = np.random.choice(total_samples, num_samples_to_select, replace=False)
+                if not os.path.exists(base_path):
 
-                for i, rand_idx in enumerate(random_indices):
-                    random_embedding = embedding_dict[rand_idx]
-                    with open(f"{base_path}/embedding_{i}.pkl", "wb") as f:
-                        pickle.dump(random_embedding, f)
+                    # Select random embeddings
+                    os.makedirs(base_path, exist_ok=True)
 
-                # Load the active learning embeddings
-                num_active_learning_embeddings = 0
-                active_learning_embeddings = {}
-                for i in range(num_iterations * B):
-                    with open(f"{base_path}/embedding_{i}.pkl", "rb") as f:
-                        embedding = pickle.load(f)
-                        num_active_learning_embeddings += 1
-                        active_learning_embeddings[i] = embedding
-                
-                print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
-                print("Done!")
-                
-                # plot_by_cluster_assignment(active_learning_embeddings)
-                # plot_by_true_labels(active_learning_embeddings)
-                # plot_by_log_density(active_learning_embeddings)
+                    # Total number of samples at the end = NUM_ITERATIONS * B
+                    embedding_dict = get_embeddings(model_name=model_name)
+
+                    num_samples_to_select = dataset_sizes[x]
+                    total_samples = len(embedding_dict)
+                    random_indices = np.random.choice(total_samples, num_samples_to_select, replace=False)
+
+                    for i, rand_idx in enumerate(random_indices):
+                        random_embedding = embedding_dict[rand_idx]
+                        with open(f"{base_path}/embedding_{i}.pkl", "wb") as f:
+                            pickle.dump(random_embedding, f)
+                else:
+                    # Load the active learning embeddings
+                    num_active_learning_embeddings = 0
+                    active_learning_embeddings = {}
+                    for i in range(num_iterations * B):
+                        with open(f"{base_path}/embedding_{i}.pkl", "rb") as f:
+                            embedding = pickle.load(f)
+                            num_active_learning_embeddings += 1
+                            active_learning_embeddings[i] = embedding
+                    
+                    print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
+                    print("Done!")
+                    
+                    plot_by_cluster_assignment(active_learning_embeddings)
+                    plot_by_true_labels(active_learning_embeddings)
+                    plot_by_log_density(active_learning_embeddings)
