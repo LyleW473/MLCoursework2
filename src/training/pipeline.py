@@ -162,7 +162,7 @@ class LinearEvalPipeline:
         self.transform = transform
         self.device = device
 
-    def load_data(self, embeddings_dir:str) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+    def load_data(self, embeddings_dir:str, model_name:str) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
 
         _, all_labels, all_embeddings = load_active_learning_embeddings(embeddings_dir)
 
@@ -179,7 +179,7 @@ class LinearEvalPipeline:
         val_dl = torch.utils.data.DataLoader(val_set, batch_size=self.training_settings["batch_size"], shuffle=False, num_workers=0)
 
 
-        with open("embeddings/simclr_cifar10_test_embeddings.pkl", "rb") as f:
+        with open(f"embeddings/{model_name}_cifar10_test_embeddings.pkl", "rb") as f:
             test_embeddings_dict = pickle.load(f)
         test_embeddings = [test_embeddings_dict[i]["embedding"] for i in range(len(test_embeddings_dict))]
         test_labels = [test_embeddings_dict[i]["label"] for i in range(len(test_embeddings_dict))]
@@ -198,7 +198,7 @@ class LinearEvalPipeline:
         scheduler = CosineAnnealingLR(optimiser, T_max=self.training_settings["n_epochs"]) # T_max is the number of epochs
         return model, criterion, optimiser, scheduler
     
-    def execute(self, version:str, setting:str, embeddings_dir:str) -> None:
+    def execute(self, model_name:str, version:str, setting:str, embeddings_dir:str) -> None:
         """
         Executes a single training run for the given version and setting, using the embeddings in the given directory.
 
@@ -208,7 +208,10 @@ class LinearEvalPipeline:
             embeddings_dir (str): The directory containing the embeddings of the images.
         
         """
-        train_dl, val_dl, test_dl = self.load_data(embeddings_dir=embeddings_dir)
+        train_dl, val_dl, test_dl = self.load_data(
+                                                    embeddings_dir=embeddings_dir, 
+                                                    model_name=model_name
+                                                    )
 
         model, criterion, optimiser, scheduler = self.initialise_components()
 
