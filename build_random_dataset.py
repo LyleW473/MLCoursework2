@@ -4,11 +4,12 @@ import random
 import pickle
 import os
 
-from src.simclr import get_simclr_embeddings
+from src.simclr import get_embeddings
 from src.plot_functions import plot_by_cluster_assignment, plot_by_true_labels, plot_by_log_density
 
 if __name__ == "__main__":
 
+    model_names = ["simclr", "dino"]
     settings = {
             "top": {"B": 10, "dataset_sizes": [10, 20, 30, 40, 50, 60]},
             "bottom": {"B": 50, "dataset_sizes": [50, 100, 150, 200, 250, 300]}
@@ -26,37 +27,40 @@ if __name__ == "__main__":
 
             num_iterations = num_iterations_for_sizes[x]
 
-            np.random.seed(2004)
-            torch.manual_seed(2004)
-            random.seed(2004)
+            for model_name in model_names:
+                np.random.seed(2004)
+                torch.manual_seed(2004)
+                random.seed(2004)
 
-            # Total number of samples at the end = NUM_ITERATIONS * B
-            embedding_dict = get_simclr_embeddings()
+                # Total number of samples at the end = NUM_ITERATIONS * B
+                embedding_dict = get_embeddings(model_name=model_name)
 
-            # Select random embeddings
-            os.makedirs(f"embeddings/random/{setting}/{num_iterations}_iterations_B{B}", exist_ok=True)
+                base_path = f"embeddings/{model_name}/random/{setting}/{num_iterations}_iterations_B{B}"
 
-            num_samples_to_select = dataset_sizes[x]
-            total_samples = len(embedding_dict)
-            random_indices = np.random.choice(total_samples, num_samples_to_select, replace=False)
+                # Select random embeddings
+                os.makedirs(base_path, exist_ok=True)
 
-            for i, rand_idx in enumerate(random_indices):
-                random_embedding = embedding_dict[rand_idx]
-                with open(f"embeddings/random/{setting}/{num_iterations}_iterations_B{B}/embedding_{i}.pkl", "wb") as f:
-                    pickle.dump(random_embedding, f)
+                num_samples_to_select = dataset_sizes[x]
+                total_samples = len(embedding_dict)
+                random_indices = np.random.choice(total_samples, num_samples_to_select, replace=False)
 
-            # Load the active learning embeddings
-            num_active_learning_embeddings = 0
-            active_learning_embeddings = {}
-            for i in range(num_iterations * B):
-                with open(f"embeddings/random/{setting}/{num_iterations}_iterations_B{B}/embedding_{i}.pkl", "rb") as f:
-                    embedding = pickle.load(f)
-                    num_active_learning_embeddings += 1
-                    active_learning_embeddings[i] = embedding
-            
-            print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
-            print("Done!")
-            
-            # plot_by_cluster_assignment(active_learning_embeddings)
-            # plot_by_true_labels(active_learning_embeddings)
-            # plot_by_log_density(active_learning_embeddings)
+                for i, rand_idx in enumerate(random_indices):
+                    random_embedding = embedding_dict[rand_idx]
+                    with open(f"{base_path}/embedding_{i}.pkl", "wb") as f:
+                        pickle.dump(random_embedding, f)
+
+                # Load the active learning embeddings
+                num_active_learning_embeddings = 0
+                active_learning_embeddings = {}
+                for i in range(num_iterations * B):
+                    with open(f"{base_path}/embedding_{i}.pkl", "rb") as f:
+                        embedding = pickle.load(f)
+                        num_active_learning_embeddings += 1
+                        active_learning_embeddings[i] = embedding
+                
+                print(f"No. of embeddings/images for new dataset: {num_active_learning_embeddings}")
+                print("Done!")
+                
+                # plot_by_cluster_assignment(active_learning_embeddings)
+                # plot_by_true_labels(active_learning_embeddings)
+                # plot_by_log_density(active_learning_embeddings)

@@ -33,8 +33,8 @@ if __name__ == "__main__":
 
     model_names = ["simclr", "dino"]
     settings = {
-            "top": {"B": 10, "dataset_sizes": [10, 20, 30, 40, 50, 60]},
-            "bottom": {"B": 50, "dataset_sizes": [50, 100, 150, 200, 250, 300]}
+            # "top": {"B": 10, "dataset_sizes": [10, 20, 30, 40, 50, 60][::-1]},
+            "bottom": {"B": 50, "dataset_sizes": [50, 100, 150, 200, 250, 300][::-1]}
             } # B = Number of new samples to query (active learning batch size)
     
     MAX_CLUSTERS = 500
@@ -54,10 +54,11 @@ if __name__ == "__main__":
                 torch.manual_seed(2004)
                 random.seed(2004)
 
+                base_path = f"embeddings/{model_name}/typiclust/{setting}/{num_iterations}_iterations_B{B}"#
+
                 # Total number of samples at the end = NUM_ITERATIONS * B
                 embedding_dict = get_embeddings(model_name=model_name)
 
-                base_path = f"embeddings/{model_name}/typiclust/{setting}/{num_iterations}_iterations_B{B}"
                 perform_typiclust(
                                 embedding_dict=embedding_dict,
                                 num_iterations=num_iterations,
