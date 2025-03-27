@@ -188,11 +188,14 @@ class LinearEvalPipeline:
         test_dl = torch.utils.data.DataLoader(test_set, batch_size=self.training_settings["batch_size"], shuffle=False, num_workers=2)
         return train_dl, val_dl, test_dl
 
-    def initialise_components(self) -> Tuple[torch.nn.Module, torch.nn.Module, torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
+    def initialise_components(self, model_name:str) -> Tuple[torch.nn.Module, torch.nn.Module, torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
         """
         Initialises the model, criterion, optimiser and scheduler.
         """
-        model = torch.nn.Linear(128, len(self.classes))
+        if model_name == "simclr":
+            model = torch.nn.Linear(128, len(self.classes))
+        else:
+            model = torch.nn.Linear(768, len(self.classes))
         model = model.to(self.device)
         criterion = nn.CrossEntropyLoss()
         optimiser = optim.SGD(model.parameters(), lr=self.training_settings["lr"], momentum=self.training_settings["momentum"], nesterov=self.training_settings["use_nesterov"])
@@ -214,7 +217,7 @@ class LinearEvalPipeline:
                                                     model_name=model_name
                                                     )
 
-        model, criterion, optimiser, scheduler = self.initialise_components()
+        model, criterion, optimiser, scheduler = self.initialise_components(model_name=model_name)
 
         model = train_model(
                             model=model,
@@ -234,11 +237,14 @@ class LinearEvalPipeline:
         iterations_and_b_setting = split_dir[-1]
         MODEL_SAVE_DIR = "linear_eval_models"
         os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
-        model_path = f"{MODEL_SAVE_DIR}/linear_{version}_{setting}_{iterations_and_b_setting}.pth"
+        model_path = f"{MODEL_SAVE_DIR}/linear_{model_name}_{version}_{setting}_{iterations_and_b_setting}.pth"
         torch.save(model.state_dict(), model_path)
 
         # Test model
-        saved_model = torch.nn.Linear(128, len(self.classes))
+        if model_name == "simclr":
+            saved_model = torch.nn.Linear(128, len(self.classes))
+        else:
+            saved_model = torch.nn.Linear(768, len(self.classes))
         saved_model.load_state_dict(torch.load(model_path))
         saved_model.to(self.device)
 
@@ -270,5 +276,5 @@ class LinearEvalPipeline:
         print("Completed training for version:", version, "and setting:", setting)
 
         # Save the completed dict in the same location (overwrite)
-        with open(f"{MODEL_SAVE_DIR}/completed_{version}_{setting}_{iterations_and_b_setting}.pth", "wb") as f:
+        with open(f"{MODEL_SAVE_DIR}/completed_{model_name}_{version}_{setting}_{iterations_and_b_setting}.pth", "wb") as f:
             torch.save(completed_dict, f)
