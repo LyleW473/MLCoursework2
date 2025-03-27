@@ -34,8 +34,8 @@ if __name__ == "__main__":
 
     model_names = ["simclr", "dino"]
     settings = {
-            # "top": {"B": 10, "dataset_sizes": [10, 20, 30, 40, 50, 60][::-1]},
-            "bottom": {"B": 50, "dataset_sizes": [50, 100, 150, 200, 250, 300][::-1]}
+            "top": {"B": 10, "dataset_sizes": [10, 20, 30, 40, 50, 60]},
+            "bottom": {"B": 50, "dataset_sizes": [50, 100, 150, 200, 250, 300]}
             } # B = Number of new samples to query (active learning batch size)
     
     MAX_CLUSTERS = 500
