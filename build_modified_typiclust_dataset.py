@@ -4,7 +4,7 @@ import pickle
 import random
 
 from src.plot_functions import plot_by_cluster_assignment, plot_by_true_labels, plot_by_log_density
-from src.simclr import get_dino_embeddings
+from src.simclr import get_embeddings
 from src.typiclust import perform_typiclust
 
 """
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             random.seed(2004)
 
             # Total number of samples at the end = NUM_ITERATIONS * B
-            embedding_dict = get_dino_embeddings()
+            embedding_dict = get_embeddings(model_name="dino")
 
             perform_typiclust(
                             embedding_dict=embedding_dict,

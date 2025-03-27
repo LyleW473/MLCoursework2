@@ -63,7 +63,6 @@ def generate_embeddings_dict(
         
         # Normalise the embeddings (L2 Normalisation)
         embeddings /= np.linalg.norm(embeddings, axis=1, keepdims=True)
-        print(embeddings.shape)
 
         for j in range(embeddings.shape[0]):
             embedding_dict[i * dataloader.batch_size + j] = {
@@ -76,52 +75,31 @@ def generate_embeddings_dict(
 
     return embedding_dict
 
-def get_simclr_embeddings() -> Dict[int, Dict[str, np.ndarray]]:
+def get_embeddings(model_name:str="dino") -> Dict[int, Dict[str, np.ndarray]]:
     """
-    Loads or creates the embeddings of the CIFAR-10 dataset using the pre-trained SimCLR model,
+    Loads or creates the embeddings of the CIFAR-10 dataset using either a pretrained SimCLR or DINO model,
     depending on whether the embeddings are already saved.
 
     Returns only the training embeddings.
     """
-    if not (os.path.exists("embeddings/simclr_cifar10_embeddings.pkl") and os.path.exists("embeddings/simclr_cifar10_test_embeddings.pkl")):
+    if not (os.path.exists(f"embeddings/{model_name}_cifar10_embeddings.pkl") and os.path.exists(f"embeddings/{model_name}_cifar10_test_embeddings.pkl")):
         print("Hello")
-        train_embedding_dict, test_embedding_dict = create_simclr_embeddings()
+        if model_name == "simclr":
+            train_embedding_dict, test_embedding_dict = create_simclr_embeddings()
+        elif model_name == "dino":
+            train_embedding_dict, test_embedding_dict = create_dino_embeddings()
+        else:
+            raise ValueError("Invalid model name. Please choose either 'simclr' or 'dino'.")
 
         # Save the embeddings
         os.makedirs("embeddings", exist_ok=True)
-        with open("embeddings/simclr_cifar10_embeddings.pkl", "wb") as f:
+        with open(f"embeddings/{model_name}_cifar10_embeddings.pkl", "wb") as f:
             pickle.dump(train_embedding_dict, f)
             
-        with open("embeddings/simclr_cifar10_test_embeddings.pkl", "wb") as f:
+        with open(f"embeddings/{model_name}_cifar10_test_embeddings.pkl", "wb") as f:
             pickle.dump(test_embedding_dict, f)
     else:
-        with open("embeddings/simclr_cifar10_embeddings.pkl", "rb") as f:
-            train_embedding_dict = pickle.load(f)
-
-        print(f"Number of embeddings: {len(train_embedding_dict)}")
-        print(train_embedding_dict[0].keys())
-    return train_embedding_dict
-
-def get_dino_embeddings() -> Dict[int, Dict[str, np.ndarray]]:
-    """
-    Loads or creates the embeddings of the CIFAR-10 dataset using the pre-trained DINO model,
-    depending on whether the embeddings are already saved.
-
-    Returns only the training embeddings.
-    """
-    if not (os.path.exists("embeddings/dino_cifar10_embeddings.pkl") and os.path.exists("embeddings/dino_cifar10_test_embeddings.pkl")):
-        print("Hello")
-        train_embedding_dict, test_embedding_dict = create_dino_embeddings()
-
-        # Save the embeddings
-        os.makedirs("embeddings", exist_ok=True)
-        with open("embeddings/dino_cifar10_embeddings.pkl", "wb") as f:
-            pickle.dump(train_embedding_dict, f)
-            
-        with open("embeddings/dino_cifar10_test_embeddings.pkl", "wb") as f:
-            pickle.dump(test_embedding_dict, f)
-    else:
-        with open("embeddings/dino_cifar10_embeddings.pkl", "rb") as f:
+        with open(f"embeddings/{model_name}_cifar10_embeddings.pkl", "rb") as f:
             train_embedding_dict = pickle.load(f)
 
         print(f"Number of embeddings: {len(train_embedding_dict)}")
