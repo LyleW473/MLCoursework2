@@ -71,6 +71,7 @@ if __name__ == "__main__":
                                     )
                     del embedding_dict
                 else:
+                    print(f"Plotting for: Model: {model_name} | Setting: {setting} | Dataset Size: {dataset_sizes[x]}")
                     # Load the active learning embeddings
                     num_active_learning_embeddings = 0
                     active_learning_embeddings = {}

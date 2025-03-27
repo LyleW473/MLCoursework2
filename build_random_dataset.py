@@ -11,8 +11,8 @@ if __name__ == "__main__":
 
     model_names = ["simclr", "dino"]
     settings = {
-            "top": {"B": 10, "dataset_sizes": [10, 20, 30, 40, 50, 60]},
-            "bottom": {"B": 50, "dataset_sizes": [50, 100, 150, 200, 250, 300]}
+            # "top": {"B": 10, "dataset_sizes": [10, 20, 30, 40, 50, 60][::-1]},
+            "bottom": {"B": 50, "dataset_sizes": [50, 100, 150, 200, 250, 300][::-1]}
             } # B = Number of new samples to query (active learning batch size)
     
     MAX_CLUSTERS = 500
@@ -53,6 +53,7 @@ if __name__ == "__main__":
                         with open(f"{base_path}/embedding_{i}.pkl", "wb") as f:
                             pickle.dump(random_embedding, f)
                 else:
+                    print(f"Plotting for: Model: {model_name} | Setting: {setting} | Dataset Size: {dataset_sizes[x]}")
                     # Load the active learning embeddings
                     num_active_learning_embeddings = 0
                     active_learning_embeddings = {}
