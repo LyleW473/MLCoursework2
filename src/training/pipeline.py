@@ -101,6 +101,7 @@ class FullySupervisedTrainingPipeline:
         iterations_and_b_setting = split_dir[-1]
         MODEL_SAVE_DIR = "models"
         os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
+        print("HERE", model_name, version, setting, iterations_and_b_setting)
         model_path = f"{MODEL_SAVE_DIR}/resnet18_{model_name}_{version}_{setting}_{iterations_and_b_setting}.pth"
         torch.save(model.state_dict(), model_path)
 
